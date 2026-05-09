@@ -972,7 +972,13 @@ function spawnEnemies() {
   Enemies = [];
   const types = Object.keys(ENEMY_DEFS);
   for (let i = 0; i < 50; i++) {
-    const pos = findValidPos();
+    let pos;
+    // Keep spawning until we find a position far from player
+    for (let attempt = 0; attempt < 50; attempt++) {
+      pos = findValidPos();
+      const d = Math.sqrt((pos.x - Player.x) ** 2 + (pos.y - Player.y) ** 2);
+      if (d > 300) break; // At least 300px from player
+    }
     const type = types[Math.floor(Math.random() * types.length)];
     spawnEnemy(type, pos.x, pos.y);
   }
@@ -1519,10 +1525,9 @@ function initGame() {
   
   // Generate world
   World.init();
-  spawnEnemies();
   spawnNPCs();
   
-  // Reset player
+  // Reset player FIRST
   const startPos = findValidPos();
   Player.x = startPos.x;
   Player.y = startPos.y;
@@ -1532,6 +1537,10 @@ function initGame() {
   Player.state = 'idle';
   Player.comboCount = 0;
   Player.corruption = 0;
+  Player.invincible = 5; // 5 seconds spawn protection
+  
+  // Spawn enemies AWAY from player
+  spawnEnemies();
   
   // Clear bosses
   Bosses = [];
