@@ -1,16 +1,483 @@
 <!DOCTYPE html>
 <html>
-<head><meta charset="UTF-8"><title>Test</title></head>
+<head>
+<meta charset="UTF-8">
+<title>ONEIROS</title>
+<style>
+body{margin:0;background:#0a0a1a;color:#ddd;font-family:system-ui;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;user-select:none}
+#game{position:relative;width:960px;height:540px}
+canvas{display:block;background:#0f0f1a}
+#ui{position:absolute;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+#ui.hidden{display:none}
+#hud{position:absolute;top:8px;left:8px;right:8px;display:flex;justify-content:space-between;pointer-events:none}
+.bar{height:10px;background:#222;border-radius:2px;overflow:hidden;margin-top:2px}
+.bar-fill{height:100%;border-radius:2px}
+.hf{background:#c01030}
+.ef{background:#2040b0}
+.xf{background:#188018}
+.btn{background:linear-gradient(135deg,#3d1e6d,#6a3dad);color:#fff;border:none;padding:12px 40px;font-size:16px;border-radius:6px;cursor:pointer;font-family:inherit;letter-spacing:2px;text-transform:uppercase}
+.btn:hover{background:linear-gradient(135deg,#4a2d7a,#9b59b6);box-shadow:0 0 15px rgba(155,89,182,0.4)}
+#msg{position:absolute;bottom:40px;left:50%;transform:translateX(-50%);background:rgba(8,4,16,0.9);color:#e0a030;padding:6px 16px;border-radius:4px;font-size:12px;display:none}
+#msg.show{display:block}
+</style>
+</head>
 <body>
-<h1 id="title">Press Start</h1>
-<canvas id="c" width="800" height="600" style="background:#222;display:block"></canvas>
-<script>
-alert("JS works!");
-var c=document.getElementById("c");
-var x=c.getContext("2d");
-x.fillStyle="lime";
-x.fillRect(100,100,200,150);
-document.getElementById("title").textContent="JS EXECUTED";
+<div id="game">
+<canvas width="960" height="540"></canvas>
+<div id="hud" style="display:none">
+  <div style="width:150px">
+    <div style="font-size:9px;color:#888">HP <span id="hp-val">100</span>/<span id="hp-max">100</span></div>
+    <div class="bar"><div class="bar-fill hf" id="hp-bar" style="width:100%"></div></div>
+    <div style="font-size:9px;color:#888;margin-top:3px">EN <span id="en-val">50</span>/<span id="en-max">50</span></div>
+    <div class="bar"><div class="bar-fill ef" id="en-bar" style="width:100%"></div></div>
+    <div style="font-size:9px;color:#888;margin-top:3px">XP <span id="xp-val">0</span>/<span id="xp-next">100</span></div>
+    <div class="bar"><div class="bar-fill xf" id="xp-bar" style="width:0%"></div></div>
+  </div>
+  <div style="text-align:right;font-size:9px;color:#888">
+    <div>NIVEL <span id="lvl">1</span></div>
+    <div id="zone">Ciudad</div>
+    <div>KILLS <span id="kills">0</span></div>
+  </div>
+</div>
+<div id="ui">
+  <div style="font-size:36px;color:#9060d0;text-shadow:0 0 20px #9060d0;letter-spacing:4px;margin-bottom:8px">ONEIROS</div>
+  <div style="font-size:11px;color:#555;margin-bottom:24px;letter-spacing:2px">El Sueno de los Agentes Vivos</div>
+  <button class="btn" id="btn-play">JUGAR</button>
+  <div style="margin-top:16px;font-size:8px;color:#333">WASD mover | Click atacar | Space dodge</div>
+</div>
+<div id="msg"></div>
+</div>
+<script type="text/javascript">
+var canvas = document.querySelector("#game canvas");
+var ctx = canvas.getContext("2d");
+var W = 960, H = 540;
+
+// State
+var state = "menu";
+var keys = {};
+var mouseDown = false;
+
+// Player
+var P = {
+  x: 1000, y: 800,
+  hp: 100, mhp: 100,
+  en: 50, men: 50,
+  xp: 0, lvl: 1, xpNext: 100,
+  atk: 10, def: 2, spd: 3,
+  facing: {x:0, y:1},
+  attackTimer: 0, attackCooldown: 20,
+  dodgeTimer: 0, dodgeCooldown: 0,
+  invincible: 0,
+  combo: 0, comboTimer: 0,
+  kills: 0,
+  animFrame: 0, animTimer: 0
+};
+
+// Enemies
+var enemies = [];
+
+// Particles
+var particles = [];
+
+// Camera
+var cam = {x: 0, y: 0};
+
+// World tiles (simple)
+var world = [];
+for(var i=0;i<80;i++){
+  world.push({x:Math.random()*2000, y:Math.random()*1500, w:30+Math.random()*50, h:30+Math.random()*50});
+}
+
+// Input
+document.addEventListener("keydown", function(e){
+  keys[e.code] = true;
+  if(e.code === "Space") e.preventDefault();
+});
+document.addEventListener("keyup", function(e){
+  keys[e.code] = false;
+});
+canvas.addEventListener("mousedown", function(){ mouseDown = true; });
+canvas.addEventListener("mouseup", function(){ mouseDown = false; });
+
+// Start button
+document.getElementById("btn-play").addEventListener("click", function(){
+  document.getElementById("ui").classList.add("hidden");
+  document.getElementById("hud").style.display = "flex";
+  state = "playing";
+  // Spawn enemies
+  for(var i=0;i<12;i++){
+    enemies.push({
+      x: Math.random()*2000, y: Math.random()*1500,
+      hp: 25+Math.floor(Math.random()*15), mhp: 30,
+      atk: 4+Math.floor(Math.random()*3), def: 1,
+      spd: 1.2+Math.random()*0.8,
+      color: [200+Math.floor(Math.random()*55), 40+Math.floor(Math.random()*40), 40+Math.floor(Math.random()*40)],
+      size: 10+Math.floor(Math.random()*5),
+      alive: true, stagger: 0, vx: 0, vy: 0,
+      aiTimer: 0, patrolAngle: Math.random()*6.28
+    });
+  }
+  showMessage("ONEIROS - El Sueno de los Agentes Vivos");
+});
+
+function showMessage(text){
+  var el = document.getElementById("msg");
+  el.textContent = text;
+  el.classList.add("show");
+  setTimeout(function(){ el.classList.remove("show"); }, 2000);
+}
+
+function emitParticles(x, y, count, color, speed){
+  for(var i=0;i<count;i++){
+    particles.push({
+      x: x, y: y,
+      vx: (Math.random()-0.5)*(speed||40),
+      vy: (Math.random()-0.5)*(speed||40),
+      life: 0.5+Math.random()*0.3,
+      color: color||[255,200,50],
+      size: 2+Math.random()*2
+    });
+  }
+}
+
+function update(){
+  if(state !== "playing") return;
+  
+  // Player movement
+  var mx = 0, my = 0;
+  if(keys["KeyW"] || keys["ArrowUp"]) my -= 1;
+  if(keys["KeyS"] || keys["ArrowDown"]) my += 1;
+  if(keys["KeyA"] || keys["ArrowLeft"]) mx -= 1;
+  if(keys["KeyD"] || keys["ArrowRight"]) mx += 1;
+  if(mx !== 0 || my !== 0){
+    var len = Math.sqrt(mx*mx+my*my);
+    P.x += (mx/len) * P.spd;
+    P.y += (my/len) * P.spd;
+    P.facing.x = mx/len;
+    P.facing.y = my/len;
+  }
+  P.x = Math.max(20, Math.min(1980, P.x));
+  P.y = Math.max(20, Math.min(1480, P.y));
+  
+  // Timers
+  if(P.attackTimer > 0) P.attackTimer--;
+  if(P.dodgeTimer > 0) P.dodgeTimer--;
+  if(P.dodgeCooldown > 0) P.dodgeCooldown--;
+  if(P.invincible > 0) P.invincible--;
+  if(P.comboTimer > 0) P.comboTimer--; else P.combo = 0;
+  P.en = Math.min(P.men, P.en + 3*0.016);
+  
+  // Attack
+  if(mouseDown && P.attackTimer <= 0 && P.dodgeTimer <= 0){
+    P.attackTimer = P.attackCooldown;
+    P.combo++;
+    P.comboTimer = 0.8;
+    var comboMult = 1 + (P.combo-1)*0.12;
+    var damage = Math.floor(P.atk * comboMult);
+    
+    // Hit enemies
+    for(var i=0;i<enemies.length;i++){
+      var e = enemies[i];
+      if(!e.alive) continue;
+      var dx = e.x - P.x, dy = e.y - P.y;
+      var d = Math.sqrt(dx*dx+dy*dy);
+      if(d < 50 + e.size){
+        var dmg = Math.max(1, damage - e.def);
+        e.hp -= dmg;
+        e.stagger = 0.15;
+        e.vx = (dx/d) * 80;
+        e.vy = (dy/d) * 80;
+        emitParticles(e.x, e.y, 4, [255,60,60], 35);
+        if(e.hp <= 0){
+          e.alive = false;
+          P.kills++;
+          P.xp += 12;
+          emitParticles(e.x, e.y, 8, [255,200,50], 50);
+          // Level up
+          if(P.xp >= P.xNext){
+            P.lvl++;
+            P.xp = 0;
+            P.xNext = Math.floor(P.xNext * 1.25);
+            P.mhp += 8;
+            P.hp = P.mhp;
+            P.atk += 2;
+            P.def += 1;
+            showMessage("NIVEL " + P.lvl + "!");
+            emitParticles(P.x, P.y, 15, [255,215,0], 60);
+          }
+        }
+      }
+    }
+  }
+  
+  // Dodge
+  if(keys["Space"] && P.dodgeCooldown <= 0 && P.dodgeTimer <= 0){
+    P.dodgeTimer = 12;
+    P.dodgeCooldown = 40;
+    P.invincible = 12;
+    var dx = P.vx || P.facing.x*5, dy = P.vy || P.facing.y*5;
+    var d = Math.sqrt(dx*dx+dy*dy) || 1;
+    P.vx = (dx/d) * 200;
+    P.vy = (dy/d) * 200;
+    emitParticles(P.x, P.y, 5, [100,140,255], 30);
+  }
+  
+  // Apply dodge velocity
+  if(P.dodgeTimer > 0){
+    P.x += P.vx * 0.016;
+    P.y += P.vy * 0.016;
+    P.vx *= 0.85;
+    P.vy *= 0.85;
+  }
+  
+  // Enemies
+  for(var i=0;i<enemies.length;i++){
+    var e = enemies[i];
+    if(!e.alive) continue;
+    
+    e.stagger -= 0.016;
+    if(e.stagger > 0){
+      e.vx *= 0.9;
+      e.vy *= 0.9;
+      e.x += e.vx * 0.016;
+      e.y += e.vy * 0.016;
+      continue;
+    }
+    
+    var dx = P.x - e.x, dy = P.y - e.y;
+    var d = Math.sqrt(dx*dx+dy*dy);
+    
+    if(d < 200){
+      // Chase
+      e.x += (dx/d) * e.spd;
+      e.y += (dy/d) * e.spd;
+    } else {
+      // Patrol
+      e.aiTimer -= 0.016;
+      if(e.aiTimer <= 0){
+        e.patrolAngle += (Math.random()-0.5)*2;
+        e.aiTimer = 2 + Math.random()*3;
+      }
+      e.x += Math.cos(e.patrolAngle) * e.spd * 0.3;
+      e.y += Math.sin(e.patrolAngle) * e.spd * 0.3;
+    }
+    
+    // Attack player
+    if(d < 25 && P.invincible <= 0){
+      P.hp -= e.atk;
+      P.invincible = 10;
+      emitParticles(P.x, P.y, 3, [255,40,40], 25);
+    }
+  }
+  
+  // Remove dead, respawn
+  for(var i=enemies.length-1;i>=0;i--){
+    if(!enemies[i].alive) enemies.splice(i,1);
+  }
+  while(enemies.length < 8){
+    var angle = Math.random()*6.28;
+    var dist = 300+Math.random()*400;
+    enemies.push({
+      x: P.x + Math.cos(angle)*dist,
+      y: P.y + Math.sin(angle)*dist,
+      hp: 25+Math.floor(Math.random()*20), mhp: 30,
+      atk: 4+Math.floor(Math.random()*4), def: 1+Math.floor(Math.random()*2),
+      spd: 1.2+Math.random()*1,
+      color: [200+Math.floor(Math.random()*55), 40+Math.floor(Math.random()*50), 40+Math.floor(Math.random()*50)],
+      size: 10+Math.floor(Math.random()*6),
+      alive: true, stagger: 0, vx: 0, vy: 0,
+      aiTimer: 0, patrolAngle: Math.random()*6.28
+    });
+  }
+  
+  // Particles
+  for(var i=particles.length-1;i>=0;i--){
+    var p = particles[i];
+    p.life -= 0.016;
+    if(p.life <= 0){ particles.splice(i,1); continue; }
+    p.x += p.vx * 0.016;
+    p.y += p.vy * 0.016;
+  }
+  
+  // Camera
+  cam.x += (P.x - W/2 - cam.x) * 5 * 0.016;
+  cam.y += (P.y - H/2 - cam.y) * 5 * 0.016;
+  
+  // Death
+  if(P.hp <= 0){
+    P.hp = P.mhp;
+    P.x = 1000;
+    P.y = 800;
+    P.invincible = 60;
+    showMessage("Has muerto! Reintentando...");
+  }
+  
+  // Animation
+  P.animTimer += 0.016;
+  if(P.animTimer > 0.1){ P.animTimer = 0; P.animFrame = (P.animFrame+1)%4; }
+  
+  // Update HUD
+  document.getElementById("hp-val").textContent = Math.ceil(P.hp);
+  document.getElementById("hp-max").textContent = P.mhp;
+  document.getElementById("hp-bar").style.width = (P.hp/P.mhp*100) + "%";
+  document.getElementById("en-val").textContent = Math.ceil(P.en);
+  document.getElementById("en-max").textContent = P.men;
+  document.getElementById("en-bar").style.width = (P.en/P.men*100) + "%";
+  document.getElementById("xp-val").textContent = P.xp;
+  document.getElementById("xp-next").textContent = P.xpNext;
+  document.getElementById("xp-bar").style.width = (P.xp/P.xpNext*100) + "%";
+  document.getElementById("lvl").textContent = P.lvl;
+  document.getElementById("kills").textContent = P.kills;
+}
+
+function render(){
+  // Clear
+  ctx.fillStyle = "#0f0f1a";
+  ctx.fillRect(0, 0, W, H);
+  
+  var cam = cam;
+  
+  // Grid
+  ctx.strokeStyle = "#1a1a30";
+  ctx.lineWidth = 1;
+  var startX = -cam.x % 40;
+  var startY = -cam.y % 40;
+  for(var x = startX; x < W; x += 40){
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, H);
+    ctx.stroke();
+  }
+  for(var y = startY; y < H; y += 40){
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(W, y);
+    ctx.stroke();
+  }
+  
+  // World objects
+  ctx.fillStyle = "#1e1e35";
+  for(var i=0;i<world.length;i++){
+    var o = world[i];
+    var sx = o.x - cam.x;
+    var sy = o.y - cam.y;
+    if(sx > -60 && sx < W+60 && sy > -60 && sy < H+60){
+      ctx.fillRect(sx, sy, o.w, o.h);
+    }
+  }
+  
+  // Enemies
+  for(var i=0;i<enemies.length;i++){
+    var e = enemies[i];
+    if(!e.alive) continue;
+    var sx = e.x - cam.x;
+    var sy = e.y - cam.y;
+    if(sx < -30 || sx > W+30 || sy < -30 || sy > H+30) continue;
+    
+    // Shadow
+    ctx.fillStyle = "rgba(0,0,0,0.2)";
+    ctx.beginPath();
+    ctx.ellipse(sx, sy+e.size*0.6, e.size*0.4, e.size*0.1, 0, 0, Math.PI*2);
+    ctx.fill();
+    
+    // Body
+    ctx.fillStyle = "rgb("+e.color.join(",")+")";
+    ctx.beginPath();
+    ctx.arc(sx, sy, e.size, 0, Math.PI*2);
+    ctx.fill();
+    
+    // Eyes
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(sx-2, sy-2, 2, 2);
+    ctx.fillRect(sx+1, sy-2, 2, 2);
+    ctx.fillStyle = "#f00";
+    ctx.fillRect(sx-1, sy-1, 1, 1);
+    ctx.fillRect(sx+2, sy-1, 1, 1);
+    
+    // HP bar
+    if(e.hp < e.mhp){
+      var bw = e.size * 1.6;
+      ctx.fillStyle = "#300";
+      ctx.fillRect(sx-bw/2, sy-e.size-4, bw, 2);
+      ctx.fillStyle = "#c01030";
+      ctx.fillRect(sx-bw/2, sy-e.size-4, bw*(e.hp/e.mhp), 2);
+    }
+  }
+  
+  // Player
+  var px = P.x - cam.x;
+  var py = P.y - cam.y;
+  
+  // Shadow
+  ctx.fillStyle = "rgba(0,0,0,0.2)";
+  ctx.beginPath();
+  ctx.ellipse(px, py+10, 7, 2.5, 0, 0, Math.PI*2);
+  ctx.fill();
+  
+  // Invincibility flash
+  if(P.invincible > 0 && Math.floor(P.invincible/3)%2 === 0){
+    ctx.globalAlpha = 0.4;
+  }
+  
+  // Dodge trail
+  if(P.dodgeTimer > 0){
+    ctx.globalAlpha = 0.2;
+    ctx.fillStyle = "rgba(100,140,255,0.15)";
+    ctx.beginPath();
+    ctx.arc(px-P.vx*0.05, py-P.vy*0.05, 10, 0, Math.PI*2);
+    ctx.fill();
+    ctx.globalAlpha = P.invincible > 0 ? 0.4 : 1;
+  }
+  
+  // Body
+  ctx.fillStyle = "#4090e0";
+  ctx.beginPath();
+  ctx.arc(px, py, 9, 0, Math.PI*2);
+  ctx.fill();
+  
+  // Inner
+  ctx.fillStyle = "#70b0f0";
+  ctx.beginPath();
+  ctx.arc(px, py, 5, 0, Math.PI*2);
+  ctx.fill();
+  
+  // Eyes
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(px+P.facing.x*2-1, py+P.facing.y*2-1, 2, 2);
+  
+  ctx.globalAlpha = 1;
+  
+  // Particles
+  for(var i=0;i<particles.length;i++){
+    var p = particles[i];
+    var a = p.life / 0.5;
+    ctx.fillStyle = "rgba("+p.color.join(",")+","+a+")";
+    ctx.fillRect(p.x-cam.x-p.size/2, p.y-cam.y-p.size/2, p.size*a, p.size*a);
+  }
+  
+  // Attack cooldown bar
+  if(P.attackTimer > 0){
+    ctx.fillStyle = "rgba(255,200,50,0.4)";
+    ctx.fillRect(0, 0, W * (P.attackTimer/P.attackCooldown), 3);
+  }
+  
+  // Combo display
+  if(P.combo > 1 && P.comboTimer > 0){
+    ctx.fillStyle = "#e0a030";
+    ctx.font = "bold 18px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(P.combo + "x COMBO!", W/2, 80);
+  }
+}
+
+function gameLoop(){
+  update();
+  render();
+  requestAnimationFrame(gameLoop);
+}
+
+// Start loop
+requestAnimationFrame(gameLoop);
 </script>
 </body>
 </html>
