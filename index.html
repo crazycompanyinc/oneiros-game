@@ -140,7 +140,7 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:cente
 <div class="hud-r">
 <div id="lvl">NIVEL 1</div>
 <div id="zone">Ciudad Despierta</div>
-<div id="plane">◈ MUNDO DESPIERTO</div>
+<div id="plane">[DIA] MUNDO DESPIERTO</div>
 <div id="gtime">06:00</div>
 <canvas id="mmap" width="100" height="100"></canvas>
 <div id="mmap-l">MAPA</div>
@@ -154,11 +154,11 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:cente
 <div id="notifs"></div>
 <div id="sf"></div>
 <div id="dlg"><div id="dport"></div><div id="dcont"><div id="dspeaker"></div><div id="dtext"></div><div id="dchoices"></div><div id="dhint">[E/Click] Continuar</div></div></div>
-<div id="inv"><h2>⚔ INVENTARIO</h2><div id="inv-grid" class="inv-grid"></div><div style="text-align:center;margin-top:12px"><button class="btn sec" onclick="closeInv()">Cerrar [Tab]</button></div></div>
-<div id="skl"><h2>✦ HABILIDADES</h2><div id="sp" style="text-align:center;color:#e0a030;font-size:11px;margin-bottom:10px"></div><div class="stree" id="stree"></div><div style="text-align:center;margin-top:12px"><button class="btn sec" onclick="closeSkl()">Cerrar [K]</button></div></div>
-<div id="crf"><h2>⚒ CRAFTING</h2><div id="cr-list"></div><div style="text-align:center;margin-top:12px"><button class="btn sec" onclick="closeCrf()">Cerrar [C]</button></div></div>
+<div id="inv"><h2>[SWORD] INVENTARIO</h2><div id="inv-grid" class="inv-grid"></div><div style="text-align:center;margin-top:12px"><button class="btn sec" onclick="closeInv()">Cerrar [Tab]</button></div></div>
+<div id="skl"><h2>[STAR] HABILIDADES</h2><div id="sp" style="text-align:center;color:#e0a030;font-size:11px;margin-bottom:10px"></div><div class="stree" id="stree"></div><div style="text-align:center;margin-top:12px"><button class="btn sec" onclick="closeSkl()">Cerrar [K]</button></div></div>
+<div id="crf"><h2>[HAMMER] CRAFTING</h2><div id="cr-list"></div><div style="text-align:center;margin-top:12px"><button class="btn sec" onclick="closeCrf()">Cerrar [C]</button></div></div>
 <div id="title"><h1>ONEIROS</h1><div class="sub">El Sueño de los Agentes Vivos</div>
-<button class="btn" onclick="startGame()">▶ JUGAR</button>
+<button class="btn" onclick="startGame()">[PLAY] JUGAR</button>
 <button class="btn sec" id="btn-cont" style="display:none" onclick="contGame()">CONTINUAR</button>
 <div id="tcredits">Un RPG de acción donde los sueños y la realidad colisionan<br>OMNIA Studios — Motor v3.0</div>
 <div id="tver">v3.0.0</div></div>
@@ -276,7 +276,7 @@ dodge(){if(this.dCD>0||this.en<8||this.dTimer>0)return;this.dTimer=this.dDur;thi
 const dx=this.vx!==0||this.vy!==0?this.vx:this.facing.x*this.spd,dy=this.vy!==0||this.vx!==0?this.vy:this.facing.y*this.spd,d=Math.sqrt(dx*dx+dy*dy)||1;
 this.vx=(dx/d)*this.dSpd;this.vy=(dy/d)*this.dSpd;Pts.emit(this.x,this.y,5,{c:[100,140,255],spd:50,l:0.3,s:3});Au.dodge()},
 parry(){if(this.pCD>0||this.en<12)return;this.pTimer=this.pWin;this.pCD=0.5;this.en-=12;this.state='parry';this.stats.parry++},
-switchW(i){if(i>=0&&i<this.weapons.length&&i!==this.cw){this.cw=i;showNotif(`⚔ ${this.weapons[i].n}`,'it')}},
+switchW(i){if(i>=0&&i<this.weapons.length&&i!==this.cw){this.cw=i;showNotif(`[SWORD] ${this.weapons[i].n}`,'it')}},
 useItem(i){const it=this.inventory[i];if(!it||it.t!=='cons')return;
 if(it.ef==='heal'){this.heal(it.qty||30);showNotif(`+${it.qty||30} HP`,'it')}else if(it.ef==='energy'){this.en=Math.min(this.men,this.en+25);showNotif('+25 Energía','it')}
 it.qty--;if(it.qty<=0)this.inventory.splice(i,1)},
@@ -302,22 +302,22 @@ const b={x,y,id,...d,mhp:d.hp,alive:true,aiT:0,aT:0,aCD:1.8,vx:0,vy:0,stagger:0,
 Bosses.push(b);curBoss=b;
 const bh=document.getElementById('bh');bh.classList.add('show');document.getElementById('bn').textContent=d.n;
 const ph=document.getElementById('bph');ph.innerHTML='';for(let i=0;i<d.ph.length+1;i++){const dt=document.createElement('div');dt.className='bpd'+(i===0?' ac':'');ph.appendChild(dt)}
-showMessage(`⚔ ${d.n} aparece!`);return b}
+showMessage(`[SWORD] ${d.n} aparece!`);return b}
 
 // === NPCs ===
 let NPCs=[];
-const ND=[{id:'kael',n:'Kael',e:'🧙',c:[50,140,190],z:'ciudad',dl:[
+const ND=[{id:'kael',n:'Kael',e:'[WIZ]',c:[50,140,190],z:'ciudad',dl:[
 {t:'Bienvenido, Oniromante. El Velo se debilita.',ch:[{t:'¿Qué es el Velo?',nx:1},{t:'¿Cómo ayudar?',nx:2},{t:'Adiós',nx:-1}]},
 {t:'El Velo es la barrera entre el mundo despierto y el plano onírico. Si cae, todo será caos.',ch:[{t:'¿Quién lo debilita?',nx:3},{t:'Entiendo. Adiós',nx:-1}]},
 {t:'Busca los Pilares del Sueño. Hay 4. Cada uno fortalece el Velo.',ch:[{t:'Los encontraré',nx:-1,fn:()=>startQ('pilares')},{t:'Primero me preparo',nx:-1}]},
 {t:'El Arquitecto Corrupto. Fue como tú, pero sucumbió a la corrupción.',ch:[{t:'No lo permitiré',nx:-1,fn:()=>{Pl.rep=Pl.rep||{};Pl.rep.oni=(Pl.rep.oni||0)+5}}]}
 ]},
-{id:'lyra',n:'Lyra',e:'🔮',c:[140,70,190],z:'velo',dl:[
+{id:'lyra',n:'Lyra',e:'[CRY]',c:[140,70,190],z:'velo',dl:[
 {t:'¿Ves los hilos del sueño que conectan todo?',ch:[{t:'¿Hilos del sueño?',nx:1},{t:'No veo nada',nx:2},{t:'Adiós',nx:-1}]},
 {t:'Todo está conectado. Tú tienes un potencial enorme.',ch:[{t:'Enséñame',nx:-1,fn:()=>{Pl.sp+=1;showNotif('+1 Punto Habilidad','xp')}},{t:'Gracias',nx:-1}]},
 {t:'Con el tiempo los verás. El sueño se revela a quienes buscan.',ch:[{t:'Seguiré buscando',nx:-1}]}
 ]},
-{id:'zephyr',n:'Zephyr',e:'💰',c:[190,140,50],z:'ciudad',dl:[
+{id:'zephyr',n:'Zephyr',e:'[GOLD]',c:[190,140,50],z:'ciudad',dl:[
 {t:'¡Bienvenido! Tengo mercancía de ambos mundos.',ch:[{t:'Ver wares',nx:-1},{t:'¿Has oído algo?',nx:1},{t:'Solo miraba',nx:-1}]},
 {t:'Dicen que en el Abismo hay un portal al plano onírico puro.',ch:[{t:'Interesante...',nx:-1}]}
 ]}];
@@ -326,7 +326,7 @@ function spawnNPCs(){NPCs=[];for(const d of ND){const pos=fndPos();NPCs.push({..
 // === QUESTS ===
 let Quests=[];
 const QD={pilares:{n:'Los Pilares del Sueño',d:'Encuentra los 4 Pilares del Sueño.',obj:[{t:'collect',item:'pilar',cur:0,tgt:4}],rew:{xp:250,gold:80}}};
-function startQ(id){const d=QD[id];if(!d||Quests.find(q=>q.id===id))return;Quests.push({id,...d,active:true,comp:false});showNotif(`⚜ Misión: ${d.n}`,'qt')}
+function startQ(id){const d=QD[id];if(!d||Quests.find(q=>q.id===id))return;Quests.push({id,...d,active:true,comp:false});showNotif(`[FLEUR] Misión: ${d.n}`,'qt')}
 
 // === CRAFTING ===
 const CR=[{n:'Espada del Amanecer',ing:[{i:'Cristal Onírico',q:3},{i:'Lágrima de Morpha',q:1}],res:{n:'Espada del Amanecer',atk:22,type:'sword',el:'light',ra:'leg'}},
@@ -335,7 +335,7 @@ const CR=[{n:'Espada del Amanecer',ing:[{i:'Cristal Onírico',q:3},{i:'Lágrima 
 {n:'Runa de Poder',ing:[{i:'Lágrima de Morpha',q:1}],res:{n:'Runa de Poder',t:'rune',st:'atk',bon:4,ra:'leg'}}];
 function canCraft(r){for(const g of r.ing){const inv=Pl.inventory.find(i=>i.n.includes(g.i));if(!inv||inv.qty<g.qty)return false}return true}
 function craft(r){if(!canCraft(r))return;for(const g of r.ing){const inv=Pl.inventory.find(i=>i.n.includes(g.i));if(inv){inv.qty-=g.qty;if(inv.qty<=0){const idx=Pl.inventory.indexOf(inv);if(idx>=0)Pl.inventory.splice(idx,1)}}}
-const res={...r.res,qty:1};const ex=Pl.inventory.find(i=>i.n===res.n);if(ex&&res.t==='cons')ex.qty+=1;else Pl.inventory.push(res);showNotif(`⚒ Crafteado: ${res.n}`,'it');Au.pick();updateCrfUI()}
+const res={...r.res,qty:1};const ex=Pl.inventory.find(i=>i.n===res.n);if(ex&&res.t==='cons')ex.qty+=1;else Pl.inventory.push(res);showNotif(`[HAMMER] Crafteado: ${res.n}`,'it');Au.pick();updateCrfUI()}
 
 // === UTILS ===
 function fndPos(){for(let i=0;i<150;i++){const x=Math.random()*(W-200)+100,y=Math.random()*(H-200)+100;if(!Wd.solid(x,y))return{x,y}}return{x:W/2+Math.random()*100,y:H/2+Math.random()*100}}
@@ -362,7 +362,7 @@ document.getElementById('lvl').textContent=`NIVEL ${Pl.lvl}`;
 const tile=Wd.get(Pl.x,Pl.y),z=tile?.z||'ciudad';
 const zn={ciudad:'Ciudad Despierta',velo:'El Velo',jardin:'Jardín Onírico',torre:'Torre de los Vigías',abismo:'El Abismo',espejos:'Palacio de Espejos'};
 document.getElementById('zone').textContent=zn[z]||z;
-document.getElementById('plane').textContent=Pl.inDream?'◈ PLANO ONÍRICO':'◈ MUNDO DESPIERTO';
+document.getElementById('plane').textContent=Pl.inDream?'[DIA] PLANO ONÍRICO':'[DIA] MUNDO DESPIERTO';
 document.getElementById('plane').style.color=Pl.inDream?'#a060e0':'#5090e0';
 const hr=Math.floor(G.day),mn=Math.floor((G.day%1)*60);
 document.getElementById('gtime').textContent=`${hr.toString().padStart(2,'0')}:${mn.toString().padStart(2,'0')}`;
@@ -388,12 +388,12 @@ function openSkl(){G.state='skills';document.getElementById('skl').classList.add
 function closeSkl(){G.state='playing';document.getElementById('skl').classList.remove('show')}
 function updateSklUI(){document.getElementById('sp').textContent=`Puntos: ${Pl.sp}`;
 const t=document.getElementById('stree');t.innerHTML='';
-[{k:'com',n:'⚔ Combate',cl:'com'},{k:'drm',n:'🌙 Sueño',cl:'drm'},{k:'shd',n:'🌑 Sombra',cl:'shd'},{k:'lgt',n:'☀ Luz',cl:'lgt'}].forEach(b=>{
+[{k:'com',n:'[SWORD] Combate',cl:'com'},{k:'drm',n:'[MOON] Sueño',cl:'drm'},{k:'shd',n:'[DARK] Sombra',cl:'shd'},{k:'lgt',n:'[SUN] Luz',cl:'lgt'}].forEach(b=>{
 const d=document.createElement('div');d.className=`sbranch ${b.cl}`;d.innerHTML=`<h3>${b.n}</h3>`;
 Pl.skills[b.k].forEach(sk=>{
 const nd=document.createElement('div');nd.className='snode'+(sk.un?' un':'');
 nd.innerHTML=`<span class="snn">${sk.n}</span><span class="snc">${sk.un?'✓':sk.c+' pt'}</span>`;
-nd.onclick=()=>{if(!sk.un&&Pl.sp>=sk.c){Pl.sp-=sk.c;sk.un=true;showNotif(`✦ ${sk.n}`,'xp');Au.lvl();updateSklUI()}};
+nd.onclick=()=>{if(!sk.un&&Pl.sp>=sk.c){Pl.sp-=sk.c;sk.un=true;showNotif(`[STAR] ${sk.n}`,'xp');Au.lvl();updateSklUI()}};
 d.appendChild(nd)});t.appendChild(d)})}
 
 function openCrf(){G.state='crafting';document.getElementById('crf').classList.add('show');updateCrfUI()}
@@ -459,7 +459,7 @@ cv.addEventListener('mouseup',e=>{if(e.button===0)G.m.ld=false;if(e.button===2)G
 cv.addEventListener('contextmenu',e=>e.preventDefault());
 
 // === GAMEPLAY ===
-function toggleDream(){if(Pl.en>=15){Pl.inDream=!Pl.inDream;Pl.en-=15;showMsg(Pl.inDream?'◈ Plano Onírico':'◈ Mundo Despierto');flash('dr');
+function toggleDream(){if(Pl.en>=15){Pl.inDream=!Pl.inDream;Pl.en-=15;showMsg(Pl.inDream?'[DIA] Plano Onírico':'[DIA] Mundo Despierto');flash('dr');
 Pts.emit(Pl.x,Pl.y,15,{c:Pl.inDream?[150,50,255]:[50,100,255],spd:70,l:0.8,s:4,gl:true});
 const tile=Wd.get(Pl.x,Pl.y);Au.amb(tile?.z||'ciudad')}else{showMsg('Energía insuficiente')}}
 
@@ -498,20 +498,20 @@ function dmgE(e,dmg){if(!e.alive)return;const d=Math.max(1,dmg-e.def);e.hp-=d;e.
 const dx=e.x-Pl.x,dy=e.y-Pl.y,dst=Math.sqrt(dx*dx+dy*dy)||1;e.vx+=(dx/dst)*120;e.vy+=(dy/dst)*120;
 Pts.emit(e.x,e.y-e.sz/2,4,{c:[255,60,60],spd:50,l:0.35,s:3});Au.hit();showDN(e.x,e.y-e.sz,d.toString(),Pl.combo>=3?'cr':'');
 if(e.hp<=0){e.alive=false;Pl.stats.ekill++;Pl.gainXP(e.xp);showNotif(`+${e.xp} XP`,'xp');
-if(Math.random()<0.35){const drops=[{n:'Poción de Vigilia',t:'cons',ef:'heal',qty:1,ra:'com'},{n:'Cristal Onírico',t:'mat',qty:1,ra:'raro'}];const dr=drops[Math.floor(Math.random()*drops.length)];Pl.inventory.push({...dr});showNotif(`📦 ${dr.n}`,'it')}
+if(Math.random()<0.35){const drops=[{n:'Poción de Vigilia',t:'cons',ef:'heal',qty:1,ra:'com'},{n:'Cristal Onírico',t:'mat',qty:1,ra:'raro'}];const dr=drops[Math.floor(Math.random()*drops.length)];Pl.inventory.push({...dr});showNotif(`[BOX] ${dr.n}`,'it')}
 Pts.emit(e.x,e.y,10,{c:e.c,spd:60,l:0.5,s:4});Au.die();
 if(Pl.stats.ekill===12){const pos=fndPos();spawnBoss('arq',pos.x,pos.y)}
 if(Pl.stats.ekill===25){const pos=fndPos();spawnBoss('dev',pos.x,pos.y)}}}
 
 function dmgB(b,dmg){if(!b.alive)return;const d=Math.max(1,dmg-b.def);b.hp-=d;Pl.stats.ddeal+=d;
 Pts.emit(b.x,b.y-b.sz,5,{c:[255,80,80],spd:50,l:0.4,s:4});Au.hit();showDN(b.x,b.y-b.sz-8,d.toString(),'cr');
-const hpP=b.hp/b.mhp;for(let i=b.ph.length-1;i>=0;i--){if(hpP<=b.ph[i].t&&b.ph<i){b.ph=i;b.phT=true;showMessage(`⚔ ¡${b.n} cambia de fase!`);Pts.emit(b.x,b.y,25,{c:b.c,spd:100,l:1.2,s:5,gl:true});G.ss=0.25;
+const hpP=b.hp/b.mhp;for(let i=b.ph.length-1;i>=0;i--){if(hpP<=b.ph[i].t&&b.ph<i){b.ph=i;b.phT=true;showMessage(`[SWORD] ¡${b.n} cambia de fase!`);Pts.emit(b.x,b.y,25,{c:b.c,spd:100,l:1.2,s:5,gl:true});G.ss=0.25;
 const dots=document.querySelectorAll('.bpd');dots.forEach((d,idx)=>d.classList.toggle('active',idx<=i));
 setTimeout(()=>{b.phT=false},1500);break}}
-if(b.hp<=0){b.alive=false;Pl.stats.bkill++;Pl.gainXP(b.xp);showNotif(`🏆 ¡${b.n} derrotado! +${b.xp} XP`,'xp');
+if(b.hp<=0){b.alive=false;Pl.stats.bkill++;Pl.gainXP(b.xp);showNotif(`[TROPHY] ¡${b.n} derrotado! +${b.xp} XP`,'xp');
 Pts.emit(b.x,b.y,30,{c:[255,200,50],spd:120,l:1.5,s:5,gl:true});G.ss=0.4;Au.lvl();
 document.getElementById('bh').classList.remove('show');curBoss=null;
-Pl.inventory.push({n:`Esencia de ${b.n}`,t:'mat',qty:1,ra:'leg'});showNotif(`📦 Esencia de ${b.n}`,'it');
+Pl.inventory.push({n:`Esencia de ${b.n}`,t:'mat',qty:1,ra:'leg'});showNotif(`[BOX] Esencia de ${b.n}`,'it');
 const tile=Wd.get(Pl.x,Pl.y);Au.amb(tile?.z||'ciudad')}}
 
 function updateEnemies(dt){for(const e of Enemies){if(!e.alive)continue;
