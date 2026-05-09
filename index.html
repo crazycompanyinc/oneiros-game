@@ -9,8 +9,8 @@
 body{background:#030308;color:#e0e0e0;font-family:'Segoe UI',system-ui,sans-serif;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;user-select:none}
 
 /* === GAME WRAPPER === */
-#game-wrapper{position:relative;border:2px solid #2a1a4a;border-radius:8px;overflow:hidden;box-shadow:0 0 60px rgba(90,30,160,0.5),inset 0 0 30px rgba(0,0,0,0.6)}
-#gameCanvas{display:block;background:#060610}
+#game-wrapper{position:relative;width:1280px;height:720px;border:2px solid #2a1a4a;border-radius:8px;overflow:hidden;box-shadow:0 0 60px rgba(90,30,160,0.5),inset 0 0 30px rgba(0,0,0,0.6);margin:0 auto}
+#gameCanvas{display:block;background:#060610;width:1280px;height:720px}
 
 /* === HUD OVERLAY === */
 #hud{position:absolute;top:0;left:0;right:0;padding:10px 16px;background:linear-gradient(to bottom,rgba(0,0,0,0.85),transparent);display:flex;justify-content:space-between;align-items:flex-start;pointer-events:none;z-index:10}
@@ -179,7 +179,7 @@ body{background:#030308;color:#e0e0e0;font-family:'Segoe UI',system-ui,sans-seri
 #screen-flash.heal{background:rgba(50,205,50,0.15)}
 
 /* === LOADING === */
-#loading-screen{position:absolute;top:0;left:0;right:0;bottom:0;background:#030308;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:200}
+#loading-screen{position:absolute;top:0;left:0;right:0;bottom:0;background:#030308;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:50}
 #loading-screen.hidden{display:none}
 #loading-bar-container{width:300px;height:4px;background:#1a1a2e;border-radius:2px;overflow:hidden;margin-top:20px}
 #loading-bar{height:100%;background:linear-gradient(90deg,#3d1e6d,#9b59b6);width:0%;transition:width 0.3s;border-radius:2px}
@@ -1667,7 +1667,7 @@ document.addEventListener('keydown', (e) => {
     if (e.code === 'KeyR') Player.parry();
     if (e.code === 'Digit1') Player.switchWeapon(0);
     if (e.code === 'Digit2') Player.switchWeapon(1);
-    if (ecode === 'Digit3') Player.switchWeapon(2);
+    if (e.code === 'Digit3') Player.switchWeapon(2);
     if (e.code === 'Digit4') Player.switchWeapon(3);
   } else if (G.state === 'dialog') {
     if (e.code === 'Escape') closeDialog();
