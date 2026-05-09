@@ -1,0 +1,1185 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ONEIROS — El Sueño de los Agentes Vivos</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #050510;
+            color: #e0e0e0;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        
+        #game-wrapper {
+            position: relative;
+            border: 3px solid #3d1e6d;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 0 40px rgba(80, 30, 150, 0.4), inset 0 0 20px rgba(0,0,0,0.5);
+        }
+        
+        #gameCanvas {
+            display: block;
+            background: #0a0a1a;
+        }
+        
+        #hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 8px 12px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            pointer-events: none;
+        }
+        
+        .hud-left { display: flex; flex-direction: column; gap: 3px; }
+        .hud-right { text-align: right; }
+        
+        .bar-container {
+            width: 140px;
+            height: 12px;
+            background: #1a1a2e;
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid #333;
+        }
+        
+        .bar-fill {
+            height: 100%;
+            border-radius: 6px;
+            transition: width 0.3s ease;
+        }
+        
+        .hp-bar { background: linear-gradient(90deg, #8b0000, #dc143c); }
+        .energy-bar { background: linear-gradient(90deg, #00008b, #4169e1); }
+        .xp-bar { background: linear-gradient(90deg, #006400, #32cd32); }
+        .corruption-bar { background: linear-gradient(90deg, #4b0082, #9b30ff); }
+        
+        .bar-label {
+            font-size: 9px;
+            color: #aaa;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        #minimap {
+            width: 100px;
+            height: 100px;
+            background: rgba(0,0,0,0.7);
+            border: 1px solid #3d1e6d;
+            border-radius: 5px;
+        }
+        
+        #message-box {
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.85);
+            color: #f1c40f;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 13px;
+            display: none;
+            border: 1px solid #f1c40f;
+            text-align: center;
+            max-width: 400px;
+        }
+        
+        #message-box.show { display: block; }
+        
+        #dialog-box {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(10, 5, 20, 0.95);
+            color: #e0e0e0;
+            padding: 15px 25px;
+            border-radius: 10px;
+            border: 2px solid #3d1e6d;
+            display: none;
+            max-width: 500px;
+            width: 90%;
+        }
+        
+        #dialog-box.show { display: block; }
+        
+        #dialog-box .speaker {
+            color: #9b59b6;
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        
+        #dialog-box .text {
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        
+        #dialog-box .hint {
+            color: #666;
+            font-size: 10px;
+            margin-top: 8px;
+            text-align: right;
+        }
+        
+        #controls-hint {
+            margin-top: 10px;
+            text-align: center;
+            color: #555;
+            font-size: 11px;
+        }
+        
+        #controls-hint kbd {
+            display: inline-block;
+            padding: 1px 5px;
+            background: #1a1a2e;
+            border: 1px solid #333;
+            border-radius: 3px;
+            margin: 0 2px;
+            font-size: 10px;
+        }
+        
+        #zone-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #9b59b6;
+            font-size: 16px;
+            text-shadow: 0 0 10px #9b59b6;
+            opacity: 0;
+            transition: opacity 0.5s;
+            pointer-events: none;
+        }
+        
+        #zone-indicator.show { opacity: 1; }
+        
+        #title-screen {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(5, 5, 16, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+        
+        #title-screen.hidden { display: none; }
+        
+        #title-screen h1 {
+            font-size: 42px;
+            color: #9b59b6;
+            text-shadow: 0 0 20px #9b59b6, 0 0 40px #4a2d7a;
+            margin-bottom: 10px;
+            letter-spacing: 4px;
+        }
+        
+        #title-screen .subtitle {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+        
+        #title-screen .start-btn {
+            background: linear-gradient(135deg, #3d1e6d, #6a3dad);
+            color: white;
+            border: none;
+            padding: 12px 40px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.3s;
+        }
+        
+        #title-screen .start-btn:hover {
+            background: linear-gradient(135deg, #4a2d7a, #9b59b6);
+            box-shadow: 0 0 20px rgba(155, 89, 182, 0.5);
+        }
+        
+        #title-screen .credits {
+            margin-top: 30px;
+            color: #444;
+            font-size: 10px;
+        }
+        
+        #game-over {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(10, 0, 0, 0.9);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+        
+        #game-over.show { display: flex; }
+        
+        #game-over h2 {
+            color: #dc143c;
+            font-size: 36px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-wrapper">
+        <canvas id="gameCanvas" width="960" height="540"></canvas>
+        
+        <div id="hud">
+            <div class="hud-left">
+                <div class="bar-label"><span>HP</span><span id="hp-text">100/100</span></div>
+                <div class="bar-container"><div class="bar-fill hp-bar" id="hp-bar" style="width:100%"></div></div>
+                <div class="bar-label"><span>ENERGÍA</span><span id="energy-text">50/50</span></div>
+                <div class="bar-container"><div class="bar-fill energy-bar" id="energy-bar" style="width:100%"></div></div>
+                <div class="bar-label"><span>XP</span><span id="xp-text">0/100</span></div>
+                <div class="bar-container"><div class="bar-fill xp-bar" id="xp-bar" style="width:0%"></div></div>
+                <div class="bar-label"><span>CORRUPCIÓN</span><span id="corr-text">0%</span></div>
+                <div class="bar-container"><div class="bar-fill corruption-bar" id="corr-bar" style="width:0%"></div></div>
+            </div>
+            <div class="hud-right">
+                <canvas id="minimap" width="100" height="100"></canvas>
+                <div id="level-display" style="color:#f1c40f;font-size:12px;margin-top:5px;">NIVEL 1</div>
+                <div id="zone-display" style="color:#9b59b6;font-size:10px;">Ciudad Despierta</div>
+                <div id="plane-display" style="color:#4169e1;font-size:10px;">◈ MUNDO DESPIERTO</div>
+            </div>
+        </div>
+        
+        <div id="zone-indicator"></div>
+        <div id="message-box"></div>
+        
+        <div id="dialog-box">
+            <div class="speaker"></div>
+            <div class="text"></div>
+            <div class="hint">[E] Continuar</div>
+        </div>
+        
+        <div id="title-screen">
+            <h1>ONEIROS</h1>
+            <div class="subtitle">El Sueño de los Agentes Vivos</div>
+            <button class="start-btn" onclick="startGame()">▶ JUGAR</button>
+            <div class="credits">
+                Creado por agentes vivos de OMNIA Studios<br>
+                Un RPG de acción donde los sueños y la realidad colisionan
+            </div>
+        </div>
+        
+        <div id="game-over">
+            <h2>HAS MUERTO</h2>
+            <p style="color:#aaa;">El sueño te ha consumido.</p>
+            <p style="color:#666;font-size:12px;">Nivel alcanzado: <span id="go-level">1</span></p>
+            <button class="start-btn" onclick="restartGame()" style="margin-top:20px;">Reintentar</button>
+        </div>
+    </div>
+    
+    <div id="controls-hint">
+        <kbd>WASD</kbd> Mover
+        <kbd>ESPACIO</kbd> Atacar
+        <kbd>E</kbd> Interactuar
+        <kbd>Q</kbd> Cambiar plano
+        <kbd>I</kbd> Inventario
+        <kbd>K</kbd> Habilidades
+    </div>
+
+<script>
+// ==============================================================================
+// MOTOR DE JUEGO HTML5
+// ==============================================================================
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const minimap = document.getElementById('minimap');
+const minimapCtx = minimap.getContext('2d');
+
+// Estado del juego
+const game = {
+    state: 'menu',
+    width: 960,
+    height: 540,
+    tileSize: 32,
+    camera: { x: 0, y: 0 },
+    keys: {},
+    mouse: { x: 0, y: 0 },
+};
+
+// Paletas de color por zona
+const PALETTAS = {
+    ciudad: { bg: [15, 12, 25], fg: [40, 35, 55], accent: [80, 60, 40], wall: [30, 25, 40] },
+    velo: { bg: [10, 5, 25], fg: [30, 20, 55], accent: [80, 40, 120], wall: [20, 10, 40] },
+    jardin: { bg: [8, 18, 12], fg: [15, 35, 25], accent: [30, 80, 50], wall: [10, 25, 15] },
+    torre: { bg: [15, 10, 20], fg: [35, 25, 45], accent: [70, 50, 80], wall: [25, 18, 35] },
+    abismo: { bg: [18, 3, 8], fg: [45, 10, 15], accent: [120, 25, 35], wall: [30, 5, 10] },
+    espejos: { bg: [10, 15, 25], fg: [25, 35, 50], accent: [60, 80, 130], wall: [18, 25, 40] },
+};
+
+// Jugador
+const player = {
+    x: 300, y: 300,
+    vx: 0, vy: 0,
+    width: 20, height: 28,
+    speed: 150,
+    hp: 100, maxHp: 100,
+    energy: 50, maxEnergy: 50,
+    attack: 15, defense: 5,
+    level: 1, xp: 0, xpToLevel: 100,
+    inDream: false,
+    corruption: 0,
+    gold: 0,
+    facing: { x: 0, y: 1 },
+    animFrame: 0, animTimer: 0,
+    attackTimer: 0, attackCooldown: 0.4,
+    inventory: [
+        { nombre: 'Espada Onírica', tipo: 'arma', ataque: 10, rareza: 'épico' },
+        { nombre: 'Poción de Vigilia', tipo: 'consumible', efecto: 'curar', cantidad: 3, rareza: 'comun' },
+        { nombre: 'Cristal Onírico', tipo: 'material', rareza: 'raro' },
+    ],
+    equippedWeapon: 0,
+    skills: [
+        { nombre: 'Toque Onírico', coste: 10, tipo: 'activa' },
+        { nombre: 'Caminar entre Sueños', coste: 0, tipo: 'pasiva' },
+        { nombre: 'Lanza de Pesadilla', coste: 20, tipo: 'activa' },
+    ],
+};
+
+// Enemigos
+let enemies = [];
+const ENEMY_TYPES = {
+    sombra_menor: { hp: 30, atk: 8, def: 2, xp: 15, speed: 60, color: [40, 20, 50], size: 18 },
+    cazador_sombras: { hp: 60, atk: 15, def: 5, xp: 35, speed: 90, color: [60, 30, 70], size: 22 },
+    devorador: { hp: 120, atk: 25, def: 10, xp: 80, speed: 40, color: [80, 20, 30], size: 28 },
+    tejedor_oscuro: { hp: 80, atk: 18, def: 7, xp: 50, speed: 70, color: [60, 20, 80], size: 24 },
+};
+
+// NPCs
+let npcs = [];
+const NPC_DATA = [
+    { nombre: 'Kael', color: [50, 150, 200], dialogos: [
+        'Bienvenido, Oniromante. El Velo se debilita.',
+        'Ten cuidado en los sueños. No todo es lo que parece.',
+        'Las sombras son más fuertes de noche.',
+        'Busca los Pilares del Sueño. Son la clave.',
+    ]},
+    { nombre: 'Lyra', color: [150, 80, 200], dialogos: [
+        '¿Puedes verlos? Los hilos del sueño...',
+        'Hay algo roto en el centro del Velo.',
+        'Sueños dentro de sueños dentro de sueños...',
+        'El Arquitecto Corrupto fue alguien bueno una vez.',
+    ]},
+    { nombre: 'Mercader', color: [200, 150, 50], dialogos: [
+        'Tengo mercancía de ambos mundos.',
+        'Lágrimas de Morpha, recién cosechadas.',
+        '¿Necesitas una poción? Te salvará la vida.',
+        'Los sueños tienen un precio. ¿Puedes pagarlo?',
+    ]},
+];
+
+// Items en el mundo
+let worldItems = [];
+
+// Mundo (tiles)
+let worldTiles = [];
+let currentZone = 'ciudad';
+
+// Partículas
+let particles = [];
+
+// Mensajes
+let messageTimer = 0;
+let messageText = '';
+
+// Diálogo
+let dialogActive = false;
+let dialogSpeaker = '';
+let dialogText = '';
+let dialogNPC = null;
+
+// Tiempo
+let lastTime = 0;
+let deltaTime = 0;
+
+// ==============================================================================
+// GENERACIÓN DEL MUNDO
+// ==============================================================================
+
+function generateWorld() {
+    worldTiles = [];
+    enemies = [];
+    npcs = [];
+    worldItems = [];
+    
+    const worldW = 2000;
+    const worldH = 2000;
+    
+    // Suelo
+    for (let x = 0; x < worldW; x += 32) {
+        for (let y = 0; y < worldH; y += 32) {
+            const isWall = x === 0 || y === 0 || x >= worldW - 32 || y >= worldH - 32;
+            worldTiles.push({
+                x, y,
+                type: isWall ? 'wall' : 'floor',
+                solid: isWall,
+            });
+        }
+    }
+    
+    // Habitaciones
+    for (let i = 0; i < 15; i++) {
+        const rw = Math.floor(Math.random() * 6 + 4) * 32;
+        const rh = Math.floor(Math.random() * 4 + 4) * 32;
+        const rx = Math.floor(Math.random() * (worldW - rw - 100) / 32) * 32 + 64;
+        const ry = Math.floor(Math.random() * (worldH - rh - 100) / 32) * 32 + 64;
+        
+        for (let x = rx; x < rx + rw; x += 32) {
+            setTile(x, ry, 'wall', true);
+            setTile(x, ry + rh - 32, 'wall', true);
+        }
+        for (let y = ry; y < ry + rh; y += 32) {
+            setTile(rx, y, 'wall', true);
+            setTile(rx + rw - 32, y, 'wall', true);
+        }
+        
+        // Puerta
+        const doorX = rx + Math.floor(rw / 2 / 32) * 32 - 16;
+        const doorY = ry + rh - 32;
+        setTile(doorX, doorY, 'floor', false);
+        setTile(doorX + 16, doorY, 'floor', false);
+    }
+    
+    // Enemigos
+    for (let i = 0; i < 20; i++) {
+        const pos = findValidPosition();
+        const types = Object.keys(ENEMY_TYPES);
+        const type = types[Math.floor(Math.random() * types.length)];
+        const data = ENEMY_TYPES[type];
+        enemies.push({
+            x: pos.x, y: pos.y,
+            type, ...data,
+            maxHp: data.hp,
+            alive: true,
+            aiTimer: 0,
+            aiState: 'idle',
+            attackTimer: 0,
+            vx: 0, vy: 0,
+        });
+    }
+    
+    // NPCs
+    for (const data of NPC_DATA) {
+        const pos = findValidPosition();
+        npcs.push({
+            x: pos.x, y: pos.y,
+            nombre: data.nombre,
+            color: data.color,
+            dialogos: data.dialogos,
+            dialogoIndex: 0,
+        });
+    }
+    
+    // Items
+    for (let i = 0; i < 12; i++) {
+        const pos = findValidPosition();
+        const items = [
+            { nombre: 'Poción de Vigilia', tipo: 'consumible', efecto: 'curar', rareza: 'comun' },
+            { nombre: 'Cristal Onírico', tipo: 'material', rareza: 'raro' },
+            { nombre: 'Lágrima de Morpha', tipo: 'material', rareza: 'legendario' },
+            { nombre: 'Llave del Velo', tipo: 'llave', rareza: 'épico' },
+        ];
+        worldItems.push({ x: pos.x, y: pos.y, item: items[Math.floor(Math.random() * items.length)] });
+    }
+}
+
+function setTile(x, y, type, solid) {
+    const idx = worldTiles.findIndex(t => t.x === x && t.y === y);
+    if (idx >= 0) {
+        worldTiles[idx] = { x, y, type, solid };
+    } else {
+        worldTiles.push({ x, y, type, solid });
+    }
+}
+
+function findValidPosition() {
+    for (let i = 0; i < 100; i++) {
+        const x = Math.random() * 1800 + 100;
+        const y = Math.random() * 1800 + 100;
+        let valid = true;
+        for (const tile of worldTiles) {
+            if (tile.solid && Math.abs(tile.x - x) < 40 && Math.abs(tile.y - y) < 40) {
+                valid = false;
+                break;
+            }
+        }
+        if (valid) return { x, y };
+    }
+    return { x: 300, y: 300 };
+}
+
+function getTilesNear(x, y, radius) {
+    return worldTiles.filter(t => Math.abs(t.x - x) < radius + 32 && Math.abs(t.y - y) < radius + 32);
+}
+
+// ==============================================================================
+// INPUT
+// ==============================================================================
+
+document.addEventListener('keydown', (e) => {
+    game.keys[e.key] = true;
+    game.keys[e.code] = true;
+    
+    if (game.state === 'playing') {
+        if (e.key === 'e' || e.key === 'E') {
+            if (dialogActive) {
+                advanceDialog();
+            } else {
+                interact();
+            }
+        }
+        if (e.key === 'q' || e.key === 'Q') {
+            toggleDream();
+        }
+        if (e.key === 'i' || e.key === 'I') {
+            showMessage('Inventario: ' + player.inventory.map(i => i.nombre).join(', '));
+        }
+        if (e.key === 'k' || e.key === 'K') {
+            showMessage('Habilidades: ' + player.skills.map(s => s.nombre).join(', '));
+        }
+    }
+    
+    if (e.key === ' ') e.preventDefault();
+});
+
+document.addEventListener('keyup', (e) => {
+    game.keys[e.key] = false;
+    game.keys[e.code] = false;
+});
+
+// ==============================================================================
+// GAMEPLAY
+// ==============================================================================
+
+function toggleDream() {
+    if (player.energy >= 20) {
+        player.inDream = !player.inDream;
+        player.energy -= 20;
+        const plano = player.inDream ? 'SUEÑO' : 'REALIDAD';
+        showMessage(`Transición al plano: ${plano}`);
+        
+        // Partículas de transición
+        for (let i = 0; i < 15; i++) {
+            particles.push({
+                x: player.x, y: player.y,
+                vx: (Math.random() - 0.5) * 100,
+                vy: (Math.random() - 0.5) * 100,
+                life: 1, maxLife: 1,
+                color: player.inDream ? [150, 50, 200] : [50, 100, 200],
+                size: 4,
+            });
+        }
+    } else {
+        showMessage('No tienes suficiente energía para cambiar de plano.');
+    }
+}
+
+function interact() {
+    // Buscar NPCs cercanos
+    for (const npc of npcs) {
+        const dist = Math.hypot(npc.x - player.x, npc.y - player.y);
+        if (dist < 50) {
+            dialogActive = true;
+            dialogSpeaker = npc.nombre;
+            dialogText = npc.dialogos[npc.dialogoIndex % npc.dialogos.length];
+            npc.dialogoIndex++;
+            dialogNPC = npc;
+            return;
+        }
+    }
+    
+    // Buscar items cercanos
+    for (let i = worldItems.length - 1; i >= 0; i--) {
+        const item = worldItems[i];
+        const dist = Math.hypot(item.x - player.x, item.y - player.y);
+        if (dist < 30) {
+            player.inventory.push(item.item);
+            showMessage(`Recogiste: ${item.item.nombre}`);
+            worldItems.splice(i, 1);
+            // Partículas
+            for (let j = 0; j < 8; j++) {
+                particles.push({
+                    x: item.x, y: item.y,
+                    vx: (Math.random() - 0.5) * 60,
+                    vy: (Math.random() - 0.5) * 60,
+                    life: 0.8, maxLife: 0.8,
+                    color: [220, 180, 60],
+                    size: 3,
+                });
+            }
+            return;
+        }
+    }
+}
+
+function advanceDialog() {
+    if (dialogNPC && dialogNPC.dialogoIndex < dialogNPC.dialogos.length) {
+        dialogText = dialogNPC.dialogos[dialogNPC.dialogoIndex % dialogNPC.dialogos.length];
+        dialogNPC.dialogoIndex++;
+    } else {
+        dialogActive = false;
+        dialogNPC = null;
+    }
+}
+
+function showMessage(text) {
+    messageText = text;
+    messageTimer = 3;
+}
+
+function playerAttack() {
+    if (player.attackTimer > 0) return;
+    player.attackTimer = player.attackCooldown;
+    
+    const attackRange = 40;
+    let hit = false;
+    
+    for (const enemy of enemies) {
+        if (!enemy.alive) continue;
+        const dist = Math.hypot(enemy.x - player.x, enemy.y - player.y);
+        if (dist < attackRange) {
+            let dmg = player.attack - enemy.def + Math.floor(Math.random() * 5) - 2;
+            if (player.inDream) dmg = Math.floor(dmg * 1.5);
+            dmg = Math.max(1, dmg);
+            enemy.hp -= dmg;
+            hit = true;
+            
+            // Partículas de impacto
+            for (let i = 0; i < 5; i++) {
+                particles.push({
+                    x: enemy.x, y: enemy.y,
+                    vx: (Math.random() - 0.5) * 80,
+                    vy: (Math.random() - 0.5) * 80,
+                    life: 0.5, maxLife: 0.5,
+                    color: [200, 50, 50],
+                    size: 3,
+                });
+            }
+            
+            if (enemy.hp <= 0) {
+                enemy.alive = false;
+                player.xp += enemy.xp;
+                showMessage(`¡${enemy.type} derrotado! +${enemy.xp} XP`);
+                
+                // Drop item
+                if (Math.random() < 0.3) {
+                    worldItems.push({
+                        x: enemy.x, y: enemy.y,
+                        item: { nombre: 'Cristal Onírico', tipo: 'material', rareza: 'raro' }
+                    });
+                }
+                
+                // Level up
+                if (player.xp >= player.xpToLevel) {
+                    player.level++;
+                    player.xp -= player.xpToLevel;
+                    player.xpToLevel = Math.floor(player.xpToLevel * 1.5);
+                    player.maxHp += 10;
+                    player.hp = player.maxHp;
+                    player.maxEnergy += 5;
+                    player.energy = player.maxEnergy;
+                    player.attack += 3;
+                    player.defense += 1;
+                    showMessage(`¡NIVEL ${player.level}!`);
+                }
+            }
+            break;
+        }
+    }
+    
+    if (!hit) {
+        // Partículas de swing
+        const sx = player.x + player.facing.x * 20;
+        const sy = player.y + player.facing.y * 20;
+        for (let i = 0; i < 3; i++) {
+            particles.push({
+                x: sx, y: sy,
+                vx: player.facing.x * 50 + (Math.random() - 0.5) * 30,
+                vy: player.facing.y * 50 + (Math.random() - 0.5) * 30,
+                life: 0.3, maxLife: 0.3,
+                color: [200, 200, 255],
+                size: 2,
+            });
+        }
+    }
+}
+
+function updatePlayer(dt) {
+    // Movimiento
+    let dx = 0, dy = 0;
+    if (game.keys['w'] || game.keys['W'] || game.keys['ArrowUp']) dy = -1;
+    if (game.keys['s'] || game.keys['S'] || game.keys['ArrowDown']) dy = 1;
+    if (game.keys['a'] || game.keys['A'] || game.keys['ArrowLeft']) dx = -1;
+    if (game.keys['d'] || game.keys['D'] || game.keys['ArrowRight']) dx = 1;
+    
+    if (dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707; }
+    
+    if (!dialogActive) {
+        player.vx = dx * player.speed;
+        player.vy = dy * player.speed;
+    } else {
+        player.vx = 0;
+        player.vy = 0;
+    }
+    
+    if (dx !== 0 || dy !== 0) {
+        player.facing = { x: dx || player.facing.x, y: dy || player.facing.y };
+    }
+    
+    // Aplicar velocidad
+    const newX = player.x + player.vx * dt;
+    const newY = player.y + player.vy * dt;
+    
+    // Colisión con tiles
+    let canMoveX = true, canMoveY = true;
+    for (const tile of getTilesNear(newX, newY, 32)) {
+        if (tile.solid) {
+            const tx = tile.x, ty = tile.y;
+            if (newX + player.width/2 > tx && newX - player.width/2 < tx + 32 &&
+                player.y + player.height/2 > ty && player.y - player.height/2 < ty + 32) {
+                canMoveX = false;
+            }
+            if (player.x + player.width/2 > tx && player.x - player.width/2 < tx + 32 &&
+                newY + player.height/2 > ty && newY - player.height/2 < ty + 32) {
+                canMoveY = false;
+            }
+        }
+    }
+    
+    if (canMoveX) player.x = newX;
+    if (canMoveY) player.y = newY;
+    
+    // Bounds
+    player.x = Math.max(30, Math.min(1970, player.x));
+    player.y = Math.max(30, Math.min(1970, player.y));
+    
+    // Ataque
+    if (game.keys[' '] && !dialogActive) {
+        playerAttack();
+    }
+    player.attackTimer = Math.max(0, player.attackTimer - dt);
+    
+    // Animación
+    player.animTimer += dt;
+    if (player.animTimer > 0.15) {
+        player.animTimer = 0;
+        player.animFrame = (player.animFrame + 1) % 4;
+    }
+    
+    // Energía
+    if (player.inDream) {
+        player.energy = Math.max(0, player.energy - 3 * dt);
+        player.corruption = Math.min(100, player.corruption + 0.8 * dt);
+        if (player.energy <= 0) {
+            player.inDream = false;
+            showMessage('¡Demasiado tiempo en sueños! Has sido expulsado.');
+        }
+    } else {
+        player.energy = Math.min(player.maxEnergy, player.energy + 5 * dt);
+        player.corruption = Math.max(0, player.corruption - 1 * dt);
+    }
+    
+    // Cámara
+    game.camera.x += (player.x - canvas.width/2 - game.camera.x) * 5 * dt;
+    game.camera.y += (player.y - canvas.height/2 - game.camera.y) * 5 * dt;
+    game.camera.x = Math.max(0, Math.min(2000 - canvas.width, game.camera.x));
+    game.camera.y = Math.max(0, Math.min(2000 - canvas.height, game.camera.y));
+}
+
+function updateEnemies(dt) {
+    for (const enemy of enemies) {
+        if (!enemy.alive) continue;
+        
+        const dist = Math.hypot(enemy.x - player.x, enemy.y - player.y);
+        
+        // IA simple
+        if (dist < 200) {
+            if (dist < 35) {
+                // Atacar
+                enemy.attackTimer -= dt;
+                if (enemy.attackTimer <= 0) {
+                    let dmg = enemy.atk - player.defense + Math.floor(Math.random() * 3);
+                    dmg = Math.max(1, dmg);
+                    player.hp -= dmg;
+                    enemy.attackTimer = 1.5;
+                    
+                    for (let i = 0; i < 4; i++) {
+                        particles.push({
+                            x: player.x, y: player.y,
+                            vx: (Math.random() - 0.5) * 60,
+                            vy: (Math.random() - 0.5) * 60,
+                            life: 0.4, maxLife: 0.4,
+                            color: [200, 50, 50],
+                            size: 2,
+                        });
+                    }
+                    
+                    if (player.hp <= 0) {
+                        game.state = 'gameover';
+                        document.getElementById('game-over').classList.add('show');
+                        document.getElementById('go-level').textContent = player.level;
+                    }
+                }
+            } else {
+                // Perseguir
+                const dir = { x: (player.x - enemy.x) / dist, y: (player.y - enemy.y) / dist };
+                enemy.vx = dir.x * enemy.speed;
+                enemy.vy = dir.y * enemy.speed;
+            }
+        } else {
+            // Idle: movimiento aleatorio
+            enemy.aiTimer -= dt;
+            if (enemy.aiTimer <= 0) {
+                enemy.aiTimer = 2 + Math.random() * 2;
+                const angle = Math.random() * Math.PI * 2;
+                enemy.vx = Math.cos(angle) * enemy.speed * 0.3;
+                enemy.vy = Math.sin(angle) * enemy.speed * 0.3;
+            }
+        }
+        
+        // Aplicar velocidad
+        enemy.x += enemy.vx * dt;
+        enemy.y += enemy.vy * dt;
+        
+        // Colisión con paredes
+        for (const tile of getTilesNear(enemy.x, enemy.y, 32)) {
+            if (tile.solid) {
+                const overlap = 20;
+                if (Math.abs(enemy.x - tile.x) < overlap && Math.abs(enemy.y - tile.y) < overlap) {
+                    enemy.x -= enemy.vx * dt * 2;
+                    enemy.y -= enemy.vy * dt * 2;
+                    enemy.vx = 0;
+                    enemy.vy = 0;
+                }
+            }
+        }
+        
+        enemy.x = Math.max(30, Math.min(1970, enemy.x));
+        enemy.y = Math.max(30, Math.min(1970, enemy.y));
+    }
+}
+
+function updateParticles(dt) {
+    for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.life -= dt;
+        p.size *= 0.98;
+        if (p.life <= 0) particles.splice(i, 1);
+    }
+}
+
+// ==============================================================================
+// RENDERIZADO
+// ==============================================================================
+
+function render() {
+    const palette = PALETTAS[currentZone] || PALETTAS.ciudad;
+    
+    // Fondo
+    ctx.fillStyle = `rgb(${palette.bg.join(',')})`;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Tiles visibles
+    const camX = game.camera.x, camY = game.camera.y;
+    
+    for (const tile of worldTiles) {
+        const sx = tile.x - camX;
+        const sy = tile.y - camY;
+        if (sx < -32 || sx > canvas.width + 32 || sy < -32 || sy > canvas.height + 32) continue;
+        
+        if (tile.type === 'wall') {
+            ctx.fillStyle = `rgb(${palette.wall.join(',')})`;
+            ctx.fillRect(sx, sy, 32, 32);
+            ctx.strokeStyle = `rgb(${palette.fg.join(',')})`;
+            ctx.strokeRect(sx, sy, 32, 32);
+        } else {
+            ctx.fillStyle = `rgb(${palette.fg.join(',')})`;
+            ctx.fillRect(sx, sy, 32, 32);
+            // Textura sutil
+            if ((tile.x / 32 + tile.y / 32) % 3 === 0) {
+                ctx.fillStyle = `rgba(${palette.accent.join(',')}, 0.3)`;
+                ctx.fillRect(sx + 4, sy + 4, 8, 8);
+            }
+        }
+    }
+    
+    // Items
+    for (const item of worldItems) {
+        const sx = item.x - camX;
+        const sy = item.y - camY;
+        if (sx < -20 || sx > canvas.width + 20 || sy < -20 || sy > canvas.height + 20) continue;
+        
+        // Brillo
+        ctx.beginPath();
+        ctx.arc(sx, sy, 10, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(220, 180, 60, 0.2)';
+        ctx.fill();
+        
+        // Item
+        ctx.fillStyle = '#f1c40f';
+        ctx.beginPath();
+        ctx.arc(sx, sy, 5, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    
+    // NPCs
+    for (const npc of npcs) {
+        const sx = npc.x - camX;
+        const sy = npc.y - camY;
+        if (sx < -30 || sx > canvas.width + 30 || sy < -30 || sy > canvas.height + 30) continue;
+        
+        // Cuerpo
+        ctx.fillStyle = `rgb(${npc.color.join(',')})`;
+        ctx.beginPath();
+        ctx.ellipse(sx, sy + 5, 8, 12, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Cabeza
+        ctx.fillStyle = '#ddb89a';
+        ctx.beginPath();
+        ctx.arc(sx, sy - 8, 7, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Nombre
+        ctx.fillStyle = `rgb(${npc.color.join(',')})`;
+        ctx.font = '9px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(npc.nombre, sx, sy - 18);
+    }
+    
+    // Enemigos
+    for (const enemy of enemies) {
+        if (!enemy.alive) continue;
+        const sx = enemy.x - camX;
+        const sy = enemy.y - camY;
+        if (sx < -30 || sx > canvas.width + 30 || sy < -30 || sy > canvas.height + 30) continue;
+        
+        // Cuerpo
+        ctx.fillStyle = `rgb(${enemy.color.join(',')})`;
+        ctx.beginPath();
+        ctx.ellipse(sx, sy, enemy.size/2, enemy.size/2 * 1.2, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Ojos
+        ctx.fillStyle = '#ff3333';
+        ctx.beginPath();
+        ctx.arc(sx - 3, sy - 3, 2, 0, Math.PI * 2);
+        ctx.arc(sx + 3, sy - 3, 2, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Barra de vida
+        if (enemy.hp < enemy.maxHp) {
+            const barW = 20;
+            const barH = 3;
+            ctx.fillStyle = '#333';
+            ctx.fillRect(sx - barW/2, sy - enemy.size/2 - 8, barW, barH);
+            ctx.fillStyle = '#dc143c';
+            ctx.fillRect(sx - barW/2, sy - enemy.size/2 - 8, barW * (enemy.hp / enemy.maxHp), barH);
+        }
+    }
+    
+    // Jugador
+    const px = player.x - camX;
+    const py = player.y - camY;
+    
+    // Efecto de sueño
+    if (player.inDream) {
+        ctx.beginPath();
+        ctx.arc(px, py, 25, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(150, 50, 200, 0.15)';
+        ctx.fill();
+    }
+    
+    // Cuerpo
+    const bodyColor = player.inDream ? [100, 50, 180] : [60, 100, 180];
+    ctx.fillStyle = `rgb(${bodyColor.join(',')})`;
+    ctx.beginPath();
+    ctx.ellipse(px, py + 5, 8, 12, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Cabeza
+    ctx.fillStyle = '#ddb89a';
+    ctx.beginPath();
+    ctx.arc(px, py - 8, 7, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Ojos
+    ctx.fillStyle = player.inDream ? '#9b59b6' : '#4169e1';
+    ctx.beginPath();
+    ctx.arc(px - 3, py - 9, 2, 0, Math.PI * 2);
+    ctx.arc(px + 3, py - 9, 2, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Capa (si está en sueño)
+    if (player.inDream) {
+        ctx.fillStyle = 'rgba(80, 30, 120, 0.6)';
+        ctx.beginPath();
+        ctx.moveTo(px - 6, py - 3);
+        ctx.lineTo(px - 12, py + 15);
+        ctx.lineTo(px, py + 18);
+        ctx.lineTo(px + 12, py + 15);
+        ctx.lineTo(px + 6, py - 3);
+        ctx.fill();
+    }
+    
+    // Partículas
+    for (const p of particles) {
+        const alpha = Math.max(0, p.life / p.maxLife);
+        ctx.fillStyle = `rgba(${p.color.join(',')}, ${alpha})`;
+        ctx.beginPath();
+        ctx.arc(p.x - camX, p.y - camY, p.size, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    
+    // Minimap
+    renderMinimap();
+}
+
+function renderMinimap() {
+    minimapCtx.fillStyle = 'rgba(0,0,0,0.7)';
+    minimapCtx.fillRect(0, 0, 100, 100);
+    
+    const scale = 100 / 2000;
+    
+    // Enemigos
+    minimapCtx.fillStyle = '#dc143c';
+    for (const e of enemies) {
+        if (!e.alive) continue;
+        minimapCtx.fillRect(e.x * scale - 1, e.y * scale - 1, 3, 3);
+    }
+    
+    // NPCs
+    minimapCtx.fillStyle = '#2ecc71';
+    for (const n of npcs) {
+        minimapCtx.fillRect(n.x * scale - 1, n.y * scale - 1, 3, 3);
+    }
+    
+    // Items
+    minimapCtx.fillStyle = '#f1c40f';
+    for (const i of worldItems) {
+        minimapCtx.fillRect(i.x * scale, i.y * scale, 2, 2);
+    }
+    
+    // Jugador
+    minimapCtx.fillStyle = '#00ffff';
+    minimapCtx.beginPath();
+    minimapCtx.arc(player.x * scale, player.y * scale, 3, 0, Math.PI * 2);
+    minimapCtx.fill();
+}
+
+// ==============================================================================
+// UI
+// ==============================================================================
+
+function updateUI() {
+    document.getElementById('hp-bar').style.width = (player.hp / player.maxHp * 100) + '%';
+    document.getElementById('hp-text').textContent = `${Math.max(0,Math.floor(player.hp))}/${player.maxHp}`;
+    document.getElementById('energy-bar').style.width = (player.energy / player.maxEnergy * 100) + '%';
+    document.getElementById('energy-text').textContent = `${Math.floor(player.energy)}/${player.maxEnergy}`;
+    document.getElementById('xp-bar').style.width = (player.xp / player.xpToLevel * 100) + '%';
+    document.getElementById('xp-text').textContent = `${player.xp}/${player.xpToLevel}`;
+    document.getElementById('corr-bar').style.width = player.corruption + '%';
+    document.getElementById('corr-text').textContent = `${Math.floor(player.corruption)}%`;
+    document.getElementById('level-display').textContent = `NIVEL ${player.level}`;
+    document.getElementById('plane-display').textContent = player.inDream ? '◈ MUNDO DE SUEÑOS' : '◈ MUNDO DESPIERTO';
+    
+    // Mensaje
+    const msgBox = document.getElementById('message-box');
+    if (messageTimer > 0) {
+        msgBox.textContent = messageText;
+        msgBox.classList.add('show');
+    } else {
+        msgBox.classList.remove('show');
+    }
+    
+    // Diálogo
+    const dialogBox = document.getElementById('dialog-box');
+    if (dialogActive) {
+        dialogBox.querySelector('.speaker').textContent = dialogSpeaker;
+        dialogBox.querySelector('.text').textContent = dialogText;
+        dialogBox.classList.add('show');
+    } else {
+        dialogBox.classList.remove('show');
+    }
+}
+
+// ==============================================================================
+// GAME LOOP
+// ==============================================================================
+
+function gameLoop(timestamp) {
+    deltaTime = Math.min((timestamp - lastTime) / 1000, 0.05);
+    lastTime = timestamp;
+    
+    if (game.state === 'playing') {
+        updatePlayer(deltaTime);
+        updateEnemies(deltaTime);
+        updateParticles(deltaTime);
+        messageTimer = Math.max(0, messageTimer - deltaTime);
+    }
+    
+    render();
+    updateUI();
+    
+    requestAnimationFrame(gameLoop);
+}
+
+// ==============================================================================
+// CONTROL
+// ==============================================================================
+
+function startGame() {
+    document.getElementById('title-screen').classList.add('hidden');
+    game.state = 'playing';
+    generateWorld();
+    lastTime = performance.now();
+    requestAnimationFrame(gameLoop);
+}
+
+function restartGame() {
+    document.getElementById('game-over').classList.remove('show');
+    player.hp = player.maxHp;
+    player.energy = player.maxEnergy;
+    player.xp = 0;
+    player.level = 1;
+    player.xpToLevel = 100;
+    player.inDream = false;
+    player.corruption = 0;
+    player.x = 300;
+    player.y = 300;
+    player.attack = 15;
+    player.defense = 5;
+    player.alive = true;
+    generateWorld();
+    game.state = 'playing';
+}
+
+// Iniciar
+game.state = 'menu';
+</script>
+</body>
+</html>
