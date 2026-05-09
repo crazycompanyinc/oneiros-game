@@ -1,1185 +1,2565 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ONEIROS — El Sueño de los Agentes Vivos</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            background: #050510;
-            color: #e0e0e0;
-            font-family: 'Courier New', monospace;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-        }
-        
-        #game-wrapper {
-            position: relative;
-            border: 3px solid #3d1e6d;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 0 40px rgba(80, 30, 150, 0.4), inset 0 0 20px rgba(0,0,0,0.5);
-        }
-        
-        #gameCanvas {
-            display: block;
-            background: #0a0a1a;
-        }
-        
-        #hud {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            padding: 8px 12px;
-            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            pointer-events: none;
-        }
-        
-        .hud-left { display: flex; flex-direction: column; gap: 3px; }
-        .hud-right { text-align: right; }
-        
-        .bar-container {
-            width: 140px;
-            height: 12px;
-            background: #1a1a2e;
-            border-radius: 6px;
-            overflow: hidden;
-            border: 1px solid #333;
-        }
-        
-        .bar-fill {
-            height: 100%;
-            border-radius: 6px;
-            transition: width 0.3s ease;
-        }
-        
-        .hp-bar { background: linear-gradient(90deg, #8b0000, #dc143c); }
-        .energy-bar { background: linear-gradient(90deg, #00008b, #4169e1); }
-        .xp-bar { background: linear-gradient(90deg, #006400, #32cd32); }
-        .corruption-bar { background: linear-gradient(90deg, #4b0082, #9b30ff); }
-        
-        .bar-label {
-            font-size: 9px;
-            color: #aaa;
-            display: flex;
-            justify-content: space-between;
-        }
-        
-        #minimap {
-            width: 100px;
-            height: 100px;
-            background: rgba(0,0,0,0.7);
-            border: 1px solid #3d1e6d;
-            border-radius: 5px;
-        }
-        
-        #message-box {
-            position: absolute;
-            bottom: 50px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.85);
-            color: #f1c40f;
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-size: 13px;
-            display: none;
-            border: 1px solid #f1c40f;
-            text-align: center;
-            max-width: 400px;
-        }
-        
-        #message-box.show { display: block; }
-        
-        #dialog-box {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(10, 5, 20, 0.95);
-            color: #e0e0e0;
-            padding: 15px 25px;
-            border-radius: 10px;
-            border: 2px solid #3d1e6d;
-            display: none;
-            max-width: 500px;
-            width: 90%;
-        }
-        
-        #dialog-box.show { display: block; }
-        
-        #dialog-box .speaker {
-            color: #9b59b6;
-            font-weight: bold;
-            margin-bottom: 5px;
-            font-size: 14px;
-        }
-        
-        #dialog-box .text {
-            font-size: 12px;
-            line-height: 1.4;
-        }
-        
-        #dialog-box .hint {
-            color: #666;
-            font-size: 10px;
-            margin-top: 8px;
-            text-align: right;
-        }
-        
-        #controls-hint {
-            margin-top: 10px;
-            text-align: center;
-            color: #555;
-            font-size: 11px;
-        }
-        
-        #controls-hint kbd {
-            display: inline-block;
-            padding: 1px 5px;
-            background: #1a1a2e;
-            border: 1px solid #333;
-            border-radius: 3px;
-            margin: 0 2px;
-            font-size: 10px;
-        }
-        
-        #zone-indicator {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: #9b59b6;
-            font-size: 16px;
-            text-shadow: 0 0 10px #9b59b6;
-            opacity: 0;
-            transition: opacity 0.5s;
-            pointer-events: none;
-        }
-        
-        #zone-indicator.show { opacity: 1; }
-        
-        #title-screen {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(5, 5, 16, 0.95);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 100;
-        }
-        
-        #title-screen.hidden { display: none; }
-        
-        #title-screen h1 {
-            font-size: 42px;
-            color: #9b59b6;
-            text-shadow: 0 0 20px #9b59b6, 0 0 40px #4a2d7a;
-            margin-bottom: 10px;
-            letter-spacing: 4px;
-        }
-        
-        #title-screen .subtitle {
-            color: #666;
-            font-size: 14px;
-            margin-bottom: 30px;
-        }
-        
-        #title-screen .start-btn {
-            background: linear-gradient(135deg, #3d1e6d, #6a3dad);
-            color: white;
-            border: none;
-            padding: 12px 40px;
-            font-size: 16px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-family: inherit;
-            transition: all 0.3s;
-        }
-        
-        #title-screen .start-btn:hover {
-            background: linear-gradient(135deg, #4a2d7a, #9b59b6);
-            box-shadow: 0 0 20px rgba(155, 89, 182, 0.5);
-        }
-        
-        #title-screen .credits {
-            margin-top: 30px;
-            color: #444;
-            font-size: 10px;
-        }
-        
-        #game-over {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(10, 0, 0, 0.9);
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 100;
-        }
-        
-        #game-over.show { display: flex; }
-        
-        #game-over h2 {
-            color: #dc143c;
-            font-size: 36px;
-            margin-bottom: 20px;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ONEIROS — El Sueño de los Agentes Vivos</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#030308;color:#e0e0e0;font-family:'Segoe UI',system-ui,sans-serif;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;user-select:none}
+
+/* === GAME WRAPPER === */
+#game-wrapper{position:relative;border:2px solid #2a1a4a;border-radius:8px;overflow:hidden;box-shadow:0 0 60px rgba(90,30,160,0.5),inset 0 0 30px rgba(0,0,0,0.6)}
+#gameCanvas{display:block;background:#060610}
+
+/* === HUD OVERLAY === */
+#hud{position:absolute;top:0;left:0;right:0;padding:10px 16px;background:linear-gradient(to bottom,rgba(0,0,0,0.85),transparent);display:flex;justify-content:space-between;align-items:flex-start;pointer-events:none;z-index:10}
+.hud-left{display:flex;flex-direction:column;gap:4px;min-width:180px}
+.hud-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:140px}
+.hud-center{position:absolute;top:8px;left:50%;transform:translateX(-50%);text-align:center;pointer-events:none}
+
+/* === BARS === */
+.bar-group{display:flex;align-items:center;gap:6px}
+.bar-label{font-size:9px;color:#999;text-transform:uppercase;letter-spacing:1px;min-width:60px}
+.bar-container{height:10px;background:rgba(20,20,35,0.9);border-radius:5px;overflow:hidden;border:1px solid rgba(60,60,80,0.5)}
+.bar-fill{height:100%;border-radius:5px;transition:width 0.2s ease;position:relative}
+.bar-fill::after{content:'';position:absolute;top:0;left:0;right:0;height:40%;background:linear-gradient(to bottom,rgba(255,255,255,0.15),transparent);border-radius:5px 5px 0 0}
+.hp-bar{background:linear-gradient(90deg,#6b0000,#dc143c,#ff4444)}
+.energy-bar{background:linear-gradient(90deg,#00006b,#4169e1,#6495ed)}
+.xp-bar{background:linear-gradient(90deg,#004400,#228b22,#32cd32)}
+.corruption-bar{background:linear-gradient(90deg,#2d0050,#8b00ff,#da70d6)}
+.bar-value{font-size:9px;color:#bbb;min-width:45px;text-align:right;font-variant-numeric:tabular-nums}
+
+/* === MINIMAP === */
+#minimap-container{position:relative}
+#minimap{width:120px;height:120px;background:rgba(5,5,15,0.8);border:1px solid #3d1e6d;border-radius:6px}
+.minimap-label{font-size:8px;color:#666;text-align:center;margin-top:2px;letter-spacing:1px}
+
+/* === ZONE / LEVEL === */
+#zone-display{font-size:11px;color:#9b59b6;text-shadow:0 0 8px rgba(155,89,182,0.5);letter-spacing:2px;text-transform:uppercase}
+#plane-display{font-size:9px;color:#4169e1;letter-spacing:1px}
+#level-display{font-size:11px;color:#f1c40f;font-weight:bold}
+#time-display{font-size:9px;color:#888}
+
+/* === MESSAGES === */
+#message-box{position:absolute;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(10,5,20,0.9);color:#f1c40f;padding:10px 24px;border-radius:8px;font-size:13px;border:1px solid rgba(241,196,15,0.3);display:none;text-align:center;max-width:500px;z-index:20;pointer-events:none;animation:messageIn 0.3s ease}
+#message-box.show{display:block}
+@keyframes messageIn{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+/* === ZONE INDICATOR === */
+#zone-indicator{position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);color:#9b59b6;font-size:24px;letter-spacing:6px;text-transform:uppercase;text-shadow:0 0 20px #9b59b6,0 0 40px #4a2d7a;opacity:0;transition:opacity 0.8s;pointer-events:none;z-index:15;font-weight:bold}
+#zone-indicator.show{opacity:1}
+
+/* === DIALOG SYSTEM === */
+#dialog-box{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,rgba(10,5,25,0.95),rgba(20,10,40,0.95));color:#e0e0e0;padding:0;border-radius:12px;border:2px solid #3d1e6d;display:none;width:600px;max-width:92%;z-index:30;overflow:hidden;box-shadow:0 0 30px rgba(90,30,160,0.3)}
+#dialog-box.show{display:block}
+#dialog-portrait{width:64px;height:64px;border-radius:8px;float:left;margin:12px;background:#1a1a2e;display:flex;align-items:center;justify-content:center;font-size:28px;border:2px solid #3d1e6d}
+#dialog-content{padding:12px 16px 12px 88px}
+#dialog-speaker{color:#9b59b6;font-weight:bold;font-size:14px;margin-bottom:4px;letter-spacing:1px}
+#dialog-text{font-size:13px;line-height:1.5;color:#ccc}
+#dialog-choices{margin-top:10px;display:flex;flex-direction:column;gap:4px}
+.dialog-choice{padding:6px 12px;background:rgba(60,30,100,0.3);border:1px solid rgba(90,30,160,0.3);border-radius:6px;cursor:pointer;font-size:12px;color:#bbb;transition:all 0.2s}
+.dialog-choice:hover{background:rgba(90,40,140,0.5);color:#fff;border-color:#9b59b6}
+.dialog-choice.selected{background:rgba(90,40,140,0.6);color:#fff;border-color:#9b59b6}
+#dialog-hint{color:#555;font-size:10px;margin-top:8px;text-align:right}
+
+/* === INVENTORY OVERLAY === */
+#inventory-overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(5,3,12,0.95);display:none;z-index:40;overflow-y:auto;padding:20px}
+#inventory-overlay.show{display:block}
+#inventory-overlay h2{color:#9b59b6;font-size:20px;letter-spacing:4px;margin-bottom:16px;text-align:center;text-transform:uppercase}
+.inv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;max-width:700px;margin:0 auto}
+.inv-slot{background:rgba(20,15,35,0.9);border:1px solid #2a1a4a;border-radius:8px;padding:10px;cursor:pointer;transition:all 0.2s;position:relative;min-height:80px}
+.inv-slot:hover{border-color:#9b59b6;background:rgba(40,20,70,0.6)}
+.inv-slot.equipped{border-color:#f1c40f;box-shadow:0 0 10px rgba(241,196,15,0.2)}
+.inv-slot-name{font-size:11px;font-weight:bold;margin-bottom:2px}
+.inv-slot-type{font-size:9px;color:#666;text-transform:uppercase}
+.inv-slot-stats{font-size:10px;color:#999;margin-top:4px}
+.inv-slot-count{position:absolute;top:6px;right:8px;font-size:10px;color:#666}
+.rarity-comun{color:#aaa}
+.rarity-raro{color:#4169e1}
+.rarity-epico{color:#9b59b6}
+.rarity-legendario{color:#f39c12}
+.rarity-mitico{color:#e74c3c}
+
+/* === SKILLS OVERLAY === */
+#skills-overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(5,3,12,0.95);display:none;z-index:40;overflow-y:auto;padding:20px}
+#skills-overlay.show{display:block}
+#skills-overlay h2{color:#9b59b6;font-size:20px;letter-spacing:4px;margin-bottom:16px;text-align:center;text-transform:uppercase}
+.skill-tree{display:flex;gap:20px;justify-content:center;flex-wrap:wrap}
+.skill-branch{display:flex;flex-direction:column;gap:8px;min-width:180px}
+.skill-branch h3{font-size:12px;text-transform:uppercase;letter-spacing:2px;margin-bottom:4px;text-align:center}
+.skill-branch.combate h3{color:#e74c3c}
+.skill-branch.sueno h3{color:#9b59b6}
+.skill-branch.sombra h3{color:#4a4a8a}
+.skill-branch.luz h3{color:#f1c40f}
+.skill-node{background:rgba(20,15,35,0.9);border:1px solid #2a1a4a;border-radius:8px;padding:10px;cursor:pointer;transition:all 0.2s;display:flex;justify-content:space-between;align-items:center}
+.skill-node:hover{border-color:#9b59b6}
+.skill-node.unlocked{border-color:#32cd32;background:rgba(20,40,20,0.5)}
+.skill-node-name{font-size:11px;font-weight:bold}
+.skill-node-cost{font-size:9px;color:#666}
+
+/* === CRAFTING OVERLAY === */
+#crafting-overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(5,3,12,0.95);display:none;z-index:40;overflow-y:auto;padding:20px}
+#crafting-overlay.show{display:block}
+#crafting-overlay h2{color:#9b59b6;font-size:20px;letter-spacing:4px;margin-bottom:16px;text-align:center;text-transform:uppercase}
+.craft-recipe{background:rgba(20,15,35,0.9);border:1px solid #2a1a4a;border-radius:8px;padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:all 0.2s}
+.craft-recipe:hover{border-color:#9b59b6}
+.craft-recipe.can-craft{border-color:#32cd32}
+.craft-recipe-name{font-size:12px;font-weight:bold}
+.craft-recipe-ingredients{font-size:10px;color:#888;margin-top:2px}
+
+/* === COMBAT UI === */
+#combo-display{position:absolute;top:80px;right:20px;font-size:28px;font-weight:bold;color:#f39c12;text-shadow:0 0 15px rgba(243,156,18,0.5);opacity:0;transition:all 0.2s;pointer-events:none;z-index:15}
+#combo-display.show{opacity:1;animation:comboPulse 0.3s ease}
+@keyframes comboPulse{0%{transform:scale(1.3)}100%{transform:scale(1)}}
+
+#damage-numbers{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:25;overflow:hidden}
+.damage-number{position:absolute;font-weight:bold;font-size:16px;animation:dmgFloat 0.8s ease-out forwards;pointer-events:none}
+.damage-number.crit{font-size:24px;color:#f39c12}
+.damage-number.heal{color:#32cd32}
+.damage-number.block{color:#4169e1}
+@keyframes dmgFloat{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-40px)}}
+
+/* === BOSS HEALTH === */
+#boss-health{position:absolute;top:50px;left:50%;transform:translateX(-50%);width:400px;display:none;z-index:15}
+#boss-health.show{display:block}
+#boss-name{font-size:12px;color:#e74c3c;text-align:center;margin-bottom:4px;letter-spacing:2px;text-transform:uppercase}
+#boss-bar-container{height:14px;background:rgba(20,10,10,0.9);border-radius:7px;overflow:hidden;border:1px solid #6b0000}
+#boss-bar{height:100%;background:linear-gradient(90deg,#6b0000,#dc143c,#ff4444);border-radius:7px;transition:width 0.3s}
+#boss-phases{display:flex;justify-content:center;gap:4px;margin-top:4px}
+.boss-phase-dot{width:8px;height:8px;border-radius:50%;background:#333;border:1px solid #666}
+.boss-phase-dot.active{background:#e74c3c;border-color:#ff4444}
+
+/* === TITLE SCREEN === */
+#title-screen{position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at center,rgba(20,10,40,0.95),rgba(3,3,8,0.98));display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100}
+#title-screen.hidden{display:none}
+#title-screen h1{font-size:56px;color:#9b59b6;text-shadow:0 0 30px #9b59b6,0 0 60px #4a2d7a,0 0 90px #2a1a4a;margin-bottom:8px;letter-spacing:8px;animation:titleGlow 3s ease-in-out infinite}
+@keyframes titleGlow{0%,100%{text-shadow:0 0 30px #9b59b6,0 0 60px #4a2d7a}50%{text-shadow:0 0 40px #9b59b6,0 0 80px #6a3dad,0 0 120px #4a2d7a}}
+#title-screen .subtitle{color:#555;font-size:14px;margin-bottom:40px;letter-spacing:3px}
+.title-btn{background:linear-gradient(135deg,#3d1e6d,#6a3dad);color:white;border:none;padding:14px 48px;font-size:16px;border-radius:8px;cursor:pointer;font-family:inherit;transition:all 0.3s;letter-spacing:2px;text-transform:uppercase;margin:4px}
+.title-btn:hover{background:linear-gradient(135deg,#4a2d7a,#9b59b6);box-shadow:0 0 25px rgba(155,89,182,0.5);transform:translateY(-1px)}
+.title-btn.secondary{background:transparent;border:1px solid #3d1e6d}
+.title-btn.secondary:hover{background:rgba(60,30,100,0.3)}
+#title-credits{margin-top:40px;color:#333;font-size:10px;text-align:center}
+#title-version{color:#222;font-size:9px;margin-top:8px}
+
+/* === PAUSE MENU === */
+#pause-menu{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(3,3,8,0.9);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:50}
+#pause-menu.show{display:flex}
+#pause-menu h2{color:#9b59b6;font-size:28px;letter-spacing:6px;margin-bottom:24px}
+
+/* === GAME OVER === */
+#game-over{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(8,0,0,0.92);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:100}
+#game-over.show{display:flex}
+#game-over h2{color:#dc143c;font-size:42px;margin-bottom:16px;text-shadow:0 0 20px #dc143c;letter-spacing:4px}
+#game-over .stats{color:#888;font-size:13px;margin-bottom:24px;text-align:center;line-height:1.8}
+
+/* === CONTROLS HINT === */
+#controls-hint{margin-top:8px;text-align:center;color:#444;font-size:10px}
+#controls-hint kbd{display:inline-block;padding:1px 5px;background:rgba(30,25,45,0.8);border:1px solid #2a1a4a;border-radius:3px;margin:0 2px;font-size:9px;color:#777}
+
+/* === NOTIFICATIONS === */
+#notifications{position:absolute;top:60px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:4px;z-index:35;pointer-events:none}
+.notification{padding:6px 16px;border-radius:6px;font-size:11px;animation:notifIn 0.3s ease,notifOut 0.3s ease 2.7s forwards;pointer-events:none;white-space:nowrap}
+.notification.xp{background:rgba(34,139,34,0.8);color:#fff}
+.notification.item{background:rgba(155,89,182,0.8);color:#fff}
+.notification.quest{background:rgba(241,196,15,0.8);color:#000}
+.notification.warning{background:rgba(220,20,60,0.8);color:#fff}
+@keyframes notifIn{from{opacity:0;transform:translateX(-50%) translateY(-10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+@keyframes notifOut{from{opacity:1}to{opacity:0}}
+
+/* === INTERACTION PROMPT === */
+#interact-prompt{position:absolute;bottom:140px;left:50%;transform:translateX(-50%);background:rgba(10,5,20,0.85);color:#f1c40f;padding:6px 16px;border-radius:6px;font-size:11px;border:1px solid rgba(241,196,15,0.3);display:none;z-index:15;pointer-events:none;white-space:nowrap}
+#interact-prompt.show{display:block}
+
+/* === SCREEN EFFECTS === */
+#screen-flash{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:50;opacity:0;transition:opacity 0.15s}
+#screen-flash.hit{background:rgba(220,20,60,0.3)}
+#screen-flash.dream{background:rgba(155,89,182,0.2)}
+#screen-flash.heal{background:rgba(50,205,50,0.15)}
+
+/* === LOADING === */
+#loading-screen{position:absolute;top:0;left:0;right:0;bottom:0;background:#030308;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:200}
+#loading-screen.hidden{display:none}
+#loading-bar-container{width:300px;height:4px;background:#1a1a2e;border-radius:2px;overflow:hidden;margin-top:20px}
+#loading-bar{height:100%;background:linear-gradient(90deg,#3d1e6d,#9b59b6);width:0%;transition:width 0.3s;border-radius:2px}
+#loading-text{color:#555;font-size:11px;margin-top:8px;letter-spacing:2px}
+</style>
 </head>
 <body>
-    <div id="game-wrapper">
-        <canvas id="gameCanvas" width="960" height="540"></canvas>
-        
-        <div id="hud">
-            <div class="hud-left">
-                <div class="bar-label"><span>HP</span><span id="hp-text">100/100</span></div>
-                <div class="bar-container"><div class="bar-fill hp-bar" id="hp-bar" style="width:100%"></div></div>
-                <div class="bar-label"><span>ENERGÍA</span><span id="energy-text">50/50</span></div>
-                <div class="bar-container"><div class="bar-fill energy-bar" id="energy-bar" style="width:100%"></div></div>
-                <div class="bar-label"><span>XP</span><span id="xp-text">0/100</span></div>
-                <div class="bar-container"><div class="bar-fill xp-bar" id="xp-bar" style="width:0%"></div></div>
-                <div class="bar-label"><span>CORRUPCIÓN</span><span id="corr-text">0%</span></div>
-                <div class="bar-container"><div class="bar-fill corruption-bar" id="corr-bar" style="width:0%"></div></div>
-            </div>
-            <div class="hud-right">
-                <canvas id="minimap" width="100" height="100"></canvas>
-                <div id="level-display" style="color:#f1c40f;font-size:12px;margin-top:5px;">NIVEL 1</div>
-                <div id="zone-display" style="color:#9b59b6;font-size:10px;">Ciudad Despierta</div>
-                <div id="plane-display" style="color:#4169e1;font-size:10px;">◈ MUNDO DESPIERTO</div>
-            </div>
-        </div>
-        
-        <div id="zone-indicator"></div>
-        <div id="message-box"></div>
-        
-        <div id="dialog-box">
-            <div class="speaker"></div>
-            <div class="text"></div>
-            <div class="hint">[E] Continuar</div>
-        </div>
-        
-        <div id="title-screen">
-            <h1>ONEIROS</h1>
-            <div class="subtitle">El Sueño de los Agentes Vivos</div>
-            <button class="start-btn" onclick="startGame()">▶ JUGAR</button>
-            <div class="credits">
-                Creado por agentes vivos de OMNIA Studios<br>
-                Un RPG de acción donde los sueños y la realidad colisionan
-            </div>
-        </div>
-        
-        <div id="game-over">
-            <h2>HAS MUERTO</h2>
-            <p style="color:#aaa;">El sueño te ha consumido.</p>
-            <p style="color:#666;font-size:12px;">Nivel alcanzado: <span id="go-level">1</span></p>
-            <button class="start-btn" onclick="restartGame()" style="margin-top:20px;">Reintentar</button>
-        </div>
+
+<div id="game-wrapper">
+<canvas id="gameCanvas" width="1280" height="720"></canvas>
+
+<!-- HUD -->
+<div id="hud">
+  <div class="hud-left">
+    <div class="bar-group">
+      <span class="bar-label">HP</span>
+      <div class="bar-container" style="width:160px"><div class="bar-fill hp-bar" id="hp-bar" style="width:100%"></div></div>
+      <span class="bar-value" id="hp-text">100/100</span>
     </div>
-    
-    <div id="controls-hint">
-        <kbd>WASD</kbd> Mover
-        <kbd>ESPACIO</kbd> Atacar
-        <kbd>E</kbd> Interactuar
-        <kbd>Q</kbd> Cambiar plano
-        <kbd>I</kbd> Inventario
-        <kbd>K</kbd> Habilidades
+    <div class="bar-group">
+      <span class="bar-label">Energía</span>
+      <div class="bar-container" style="width:160px"><div class="bar-fill energy-bar" id="energy-bar" style="width:100%"></div></div>
+      <span class="bar-value" id="energy-text">50/50</span>
     </div>
+    <div class="bar-group">
+      <span class="bar-label">XP</span>
+      <div class="bar-container" style="width:160px"><div class="bar-fill xp-bar" id="xp-bar" style="width:0%"></div></div>
+      <span class="bar-value" id="xp-text">0/100</span>
+    </div>
+    <div class="bar-group">
+      <span class="bar-label">Corrup.</span>
+      <div class="bar-container" style="width:160px"><div class="bar-fill corruption-bar" id="corr-bar" style="width:0%"></div></div>
+      <span class="bar-value" id="corr-text">0%</span>
+    </div>
+  </div>
+  <div class="hud-center">
+    <div id="combo-display"></div>
+  </div>
+  <div class="hud-right">
+    <div id="level-display">NIVEL 1</div>
+    <div id="zone-display">Ciudad Despierta</div>
+    <div id="plane-display">◈ MUNDO DESPIERTO</div>
+    <div id="time-display">06:00</div>
+    <div id="minimap-container">
+      <canvas id="minimap" width="120" height="120"></canvas>
+      <div class="minimap-label">MAPA</div>
+    </div>
+  </div>
+</div>
+
+<!-- Boss Health -->
+<div id="boss-health">
+  <div id="boss-name"></div>
+  <div id="boss-bar-container"><div id="boss-bar" style="width:100%"></div></div>
+  <div id="boss-phases"></div>
+</div>
+
+<!-- Overlays -->
+<div id="zone-indicator"></div>
+<div id="message-box"></div>
+<div id="interact-prompt"></div>
+<div id="damage-numbers"></div>
+<div id="notifications"></div>
+<div id="screen-flash"></div>
+
+<!-- Dialog -->
+<div id="dialog-box">
+  <div id="dialog-portrait"></div>
+  <div id="dialog-content">
+    <div id="dialog-speaker"></div>
+    <div id="dialog-text"></div>
+    <div id="dialog-choices"></div>
+    <div id="dialog-hint">[E] Continuar · [1-4] Elegir</div>
+  </div>
+</div>
+
+<!-- Inventory -->
+<div id="inventory-overlay">
+  <h2>⚔ INVENTARIO</h2>
+  <div id="inv-grid" class="inv-grid"></div>
+  <div style="text-align:center;margin-top:16px">
+    <button class="title-btn secondary" onclick="closeInventory()">Cerrar [I]</button>
+  </div>
+</div>
+
+<!-- Skills -->
+<div id="skills-overlay">
+  <h2>✦ HABILIDADES</h2>
+  <div id="skill-points" style="text-align:center;color:#f1c40f;font-size:12px;margin-bottom:12px"></div>
+  <div class="skill-tree" id="skill-tree"></div>
+  <div style="text-align:center;margin-top:16px">
+    <button class="title-btn secondary" onclick="closeSkills()">Cerrar [K]</button>
+  </div>
+</div>
+
+<!-- Crafting -->
+<div id="crafting-overlay">
+  <h2>⚒ CRAFTING</h2>
+  <div id="craft-recipes"></div>
+  <div style="text-align:center;margin-top:16px">
+    <button class="title-btn secondary" onclick="closeCrafting()">Cerrar [C]</button>
+  </div>
+</div>
+
+<!-- Title Screen -->
+<div id="title-screen">
+  <h1>ONEIROS</h1>
+  <div class="subtitle">El Sueño de los Agentes Vivos</div>
+  <button class="title-btn" onclick="startGame()">▶ JUGAR</button>
+  <button class="title-btn secondary" onclick="continueGame()" id="btn-continue" style="display:none">CONTINUAR</button>
+  <div id="title-credits">
+    Un RPG de acción donde los sueños y la realidad colisionan<br>
+    Creado por OMNIA Studios — Motor v2.0
+  </div>
+  <div id="title-version">v2.0.0 · AAA Engine</div>
+</div>
+
+<!-- Pause Menu -->
+<div id="pause-menu">
+  <h2>PAUSA</h2>
+  <button class="title-btn" onclick="resumeGame()">Continuar</button>
+  <button class="title-btn secondary" onclick="saveGame()">Guardar</button>
+  <button class="title-btn secondary" onclick="showControls()">Controles</button>
+  <button class="title-btn secondary" onclick="quitToTitle()">Salir al Menú</button>
+</div>
+
+<!-- Game Over -->
+<div id="game-over">
+  <h2>HAS MUERTO</h2>
+  <div class="stats" id="go-stats"></div>
+  <button class="title-btn" onclick="restartGame()">Reintentar</button>
+  <button class="title-btn secondary" onclick="quitToTitle()">Menú Principal</button>
+</div>
+
+<!-- Loading -->
+<div id="loading-screen">
+  <div style="color:#9b59b6;font-size:24px;letter-spacing:6px">ONEIROS</div>
+  <div id="loading-bar-container"><div id="loading-bar"></div></div>
+  <div id="loading-text">Cargando mundo...</div>
+</div>
+</div>
+
+<div id="controls-hint">
+  <kbd>WASD</kbd> Mover · <kbd>SPACE</kbd> Atacar · <kbd>SHIFT</kbd> Dodge · <kbd>E</kbd> Interactuar · <kbd>Q</kbd> Cambiar Plano · <kbd>R</kbd> Parry · <kbd>1-4</kbd> Armas · <kbd>I</kbd> Inventario · <kbd>K</kbd> Habilidades · <kbd>C</kbd> Crafting · <kbd>ESC</kbd> Pausa
+</div>
 
 <script>
-// ==============================================================================
-// MOTOR DE JUEGO HTML5
-// ==============================================================================
+// ============================================================================
+// ONEIROS v2.0 — AAA Action-RPG Engine
+// Motor completo: render, física, combate, mundo, narrativa, audio
+// ============================================================================
 
+'use strict';
+
+// === CONSTANTES ===
+const TILE = 32;
+const WORLD_W = 3000;
+const WORLD_H = 3000;
+const CANVAS_W = 1280;
+const CANVAS_H = 720;
+
+// === CANVASES ===
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const minimap = document.getElementById('minimap');
 const minimapCtx = minimap.getContext('2d');
 
-// Estado del juego
-const game = {
-    state: 'menu',
-    width: 960,
-    height: 540,
-    tileSize: 32,
-    camera: { x: 0, y: 0 },
-    keys: {},
-    mouse: { x: 0, y: 0 },
+// === ESTADO GLOBAL ===
+const G = {
+  state: 'menu', // menu, playing, paused, dialog, inventory, skills, crafting, gameover
+  time: 0,
+  deltaTime: 0,
+  lastTime: 0,
+  frameCount: 0,
+  camera: { x: 0, y: 0 },
+  keys: {},
+  keysJust: {},
+  mouse: { x: 0, y: 0, down: false },
+  screenShake: 0,
+  slowMotion: 1,
+  dayTime: 6, // 0-24
+  daySpeed: 0.3, // minutos de juego por segundo real
 };
 
-// Paletas de color por zona
-const PALETTAS = {
-    ciudad: { bg: [15, 12, 25], fg: [40, 35, 55], accent: [80, 60, 40], wall: [30, 25, 40] },
-    velo: { bg: [10, 5, 25], fg: [30, 20, 55], accent: [80, 40, 120], wall: [20, 10, 40] },
-    jardin: { bg: [8, 18, 12], fg: [15, 35, 25], accent: [30, 80, 50], wall: [10, 25, 15] },
-    torre: { bg: [15, 10, 20], fg: [35, 25, 45], accent: [70, 50, 80], wall: [25, 18, 35] },
-    abismo: { bg: [18, 3, 8], fg: [45, 10, 15], accent: [120, 25, 35], wall: [30, 5, 10] },
-    espejos: { bg: [10, 15, 25], fg: [25, 35, 50], accent: [60, 80, 130], wall: [18, 25, 40] },
+// === AUDIO ENGINE (Web Audio API) ===
+const AudioEngine = {
+  ctx: null,
+  masterGain: null,
+  musicGain: null,
+  sfxGain: null,
+  currentMusic: null,
+  init() {
+    try {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      this.masterGain = this.ctx.createGain();
+      this.masterGain.gain.value = 0.3;
+      this.masterGain.connect(this.ctx.destination);
+      this.musicGain = this.ctx.createGain();
+      this.musicGain.gain.value = 0.4;
+      this.musicGain.connect(this.masterGain);
+      this.sfxGain = this.ctx.createGain();
+      this.sfxGain.gain.value = 0.6;
+      this.sfxGain.connect(this.masterGain);
+    } catch(e) { console.warn('Audio not available'); }
+  },
+  playTone(freq, duration, type='sine', gain=0.3, dest=null) {
+    if (!this.ctx) return;
+    try {
+      const osc = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      osc.type = type;
+      osc.frequency.value = freq;
+      g.gain.value = gain;
+      g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+      osc.connect(g);
+      g.connect(dest || this.sfxGain);
+      osc.start();
+      osc.stop(this.ctx.currentTime + duration);
+    } catch(e) {}
+  },
+  playAttack() { this.playTone(200 + Math.random()*100, 0.1, 'sawtooth', 0.2); },
+  playHit() { this.playTone(150, 0.15, 'square', 0.25); this.playTone(100, 0.1, 'sawtooth', 0.15); },
+  playParry() { this.playTone(800, 0.08, 'sine', 0.3); this.playTone(1200, 0.1, 'sine', 0.2); },
+  playDodge() { this.playTone(400, 0.08, 'sine', 0.15); },
+  playLevelUp() {
+    if (!this.ctx) return;
+    [440, 554, 659, 880].forEach((f, i) => {
+      setTimeout(() => this.playTone(f, 0.3, 'sine', 0.2), i * 100);
+    });
+  },
+  playPickup() { this.playTone(600, 0.1, 'sine', 0.2); this.playTone(900, 0.1, 'sine', 0.15); },
+  playDeath() {
+    if (!this.ctx) return;
+    [400, 300, 200, 100].forEach((f, i) => {
+      setTimeout(() => this.playTone(f, 0.4, 'sawtooth', 0.2), i * 150);
+    });
+  },
+  playBossMusic() {
+    if (!this.ctx) return;
+    // Dark ambient drone
+    const drone = this.ctx.createOscillator();
+    drone.type = 'sawtooth';
+    drone.frequency.value = 55;
+    const droneGain = this.ctx.createGain();
+    droneGain.gain.value = 0.15;
+    drone.connect(droneGain);
+    droneGain.connect(this.musicGain);
+    drone.start();
+    this.currentMusic = { stop() { drone.stop(); } };
+  },
+  playAmbient(zone) {
+    if (!this.ctx || !this.musicGain) return;
+    if (this.currentMusic) { try { this.currentMusic.stop(); } catch(e) {} }
+    // Generar música ambiental procedural según zona
+    const freqs = {
+      ciudad: [220, 277, 330, 440],
+      velo: [185, 233, 277, 370],
+      jardin: [261, 329, 392, 523],
+      torre: [196, 246, 293, 392],
+      abismo: [146, 185, 220, 293],
+      espejos: [246, 311, 369, 493],
+    };
+    const notes = freqs[zone] || freqs.ciudad;
+    let noteIdx = 0;
+    const interval = setInterval(() => {
+      if (G.state !== 'playing') { clearInterval(interval); return; }
+      const f = notes[noteIdx % notes.length];
+      this.playTone(f, 2, 'sine', 0.08, this.musicGain);
+      if (Math.random() > 0.5) this.playTone(f * 1.5, 1.5, 'sine', 0.04, this.musicGain);
+      noteIdx++;
+    }, 2000);
+    this.currentMusic = { stop() { clearInterval(interval); } };
+  }
 };
 
-// Jugador
-const player = {
-    x: 300, y: 300,
+// === SISTEMA DE PARTÍCULAS ===
+const Particles = {
+  list: [],
+  pool: [],
+  get() { return this.pool.length ? this.pool.pop() : {}; },
+  release(p) { this.pool.push(p); },
+  emit(x, y, count, opts = {}) {
+    for (let i = 0; i < count; i++) {
+      const p = this.get();
+      p.x = x + (Math.random() - 0.5) * (opts.spread || 10);
+      p.y = y + (Math.random() - 0.5) * (opts.spread || 10);
+      p.vx = (Math.random() - 0.5) * (opts.speed || 100);
+      p.vy = (Math.random() - 0.5) * (opts.speed || 100) - (opts.up || 0);
+      p.life = opts.life || 1;
+      p.maxLife = p.life;
+      p.size = opts.size || 3;
+      p.color = opts.color || [255, 255, 255];
+      p.gravity = opts.gravity || 0;
+      p.friction = opts.friction || 0.98;
+      p.shrink = opts.shrink !== false;
+      p.glow = opts.glow || false;
+      this.list.push(p);
+    }
+  },
+  update(dt) {
+    for (let i = this.list.length - 1; i >= 0; i--) {
+      const p = this.list[i];
+      p.life -= dt;
+      if (p.life <= 0) { this.release(this.list.splice(i, 1)[0]); continue; }
+      p.vx *= p.friction;
+      p.vy *= p.friction;
+      p.vy += p.gravity * dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+    }
+  },
+  draw(ctx, cam) {
+    for (const p of this.list) {
+      const sx = p.x - cam.x;
+      const sy = p.y - cam.y;
+      const alpha = Math.max(0, p.life / p.maxLife);
+      const size = p.shrink ? p.size * alpha : p.size;
+      if (p.glow) {
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = `rgba(${p.color.join(',')},${alpha})`;
+      }
+      ctx.fillStyle = `rgba(${p.color.join(',')},${alpha})`;
+      ctx.fillRect(sx - size/2, sy - size/2, size, size);
+      ctx.shadowBlur = 0;
+    }
+  }
+};
+
+// === SISTEMA DE TILES (Spatial Hash) ===
+const World = {
+  tiles: new Map(),
+  spatialHash: new Map(),
+  cellSize: 128,
+  decorations: [],
+  lights: [],
+  
+  key(x, y) { return `${Math.floor(x/TILE)},${Math.floor(y/TILE)}`; },
+  hashKey(x, y) { return `${Math.floor(x/this.cellSize)},${Math.floor(y/this.cellSize)}`; },
+  
+  setTile(x, y, type, solid, zone) {
+    const k = this.key(x, y);
+    const tile = { x, y, type, solid, zone: zone || 'ciudad' };
+    this.tiles.set(k, tile);
+    const hk = this.hashKey(x, y);
+    if (!this.spatialHash.has(hk)) this.spatialHash.set(hk, []);
+    const arr = this.spatialHash.get(hk);
+    const idx = arr.findIndex(t => t.x === x && t.y === y);
+    if (idx >= 0) arr[idx] = tile; else arr.push(tile);
+  },
+  
+  getTile(x, y) { return this.tiles.get(this.key(x, y)) || null; },
+  
+  getTilesInRadius(x, y, radius) {
+    const result = [];
+    const minCX = Math.floor((x - radius) / this.cellSize);
+    const maxCX = Math.floor((x + radius) / this.cellSize);
+    const minCY = Math.floor((y - radius) / this.cellSize);
+    const maxCY = Math.floor((y + radius) / this.cellSize);
+    for (let cx = minCX; cx <= maxCX; cx++) {
+      for (let cy = minCY; cy <= maxCY; cy++) {
+        const arr = this.spatialHash.get(`${cx},${cy}`);
+        if (arr) for (const t of arr) {
+          if (Math.abs(t.x - x) < radius + TILE && Math.abs(t.y - y) < radius + TILE) result.push(t);
+        }
+      }
+    }
+    return result;
+  },
+  
+  isSolid(x, y) {
+    const t = this.getTile(x, y);
+    return t ? t.solid : true;
+  },
+  
+  init() {
+    this.tiles.clear();
+    this.spatialHash.clear();
+    this.decorations = [];
+    this.lights = [];
+    
+    // Generar mundo con biomas
+    this.generateWorld();
+  },
+  
+  generateWorld() {
+    const seed = Date.now();
+    const noise = (x, y, freq = 0.01) => {
+      return Math.sin(x * freq * 1.7 + seed * 0.0001) * Math.cos(y * freq * 2.3 + seed * 0.00015) +
+             Math.sin(x * freq * 0.7 + y * freq * 0.5) * 0.5;
+    };
+    
+    // Suelo base
+    for (let x = 0; x < WORLD_W; x += TILE) {
+      for (let y = 0; y < WORLD_H; y += TILE) {
+        const n = noise(x, y, 0.005);
+        const zoneNoise = noise(x, y, 0.003);
+        let zone = 'ciudad';
+        if (zoneNoise > 0.4) zone = 'velo';
+        else if (zoneNoise > 0.1) zone = 'jardin';
+        else if (zoneNoise < -0.4) zone = 'abismo';
+        else if (zoneNoise < -0.1) zone = 'torre';
+        else if (Math.abs(zoneNoise) < 0.05) zone = 'espejos';
+        
+        const isWall = x === 0 || y === 0 || x >= WORLD_W - TILE || y >= WORLD_H - TILE;
+        const isBuilding = n > 0.7 && x > 100 && y > 100 && x < WORLD_W - 100 && y < WORLD_H - 100;
+        
+        this.setTile(x, y, (isWall || isBuilding) ? 'wall' : 'floor', isWall || isBuilding, zone);
+      }
+    }
+    
+    // Crear caminos/habitaciones
+    for (let i = 0; i < 30; i++) {
+      const rx = Math.floor(Math.random() * (WORLD_W - 400) / TILE) * TILE + 100;
+      const ry = Math.floor(Math.random() * (WORLD_H - 400) / TILE) * TILE + 100;
+      const rw = (Math.floor(Math.random() * 6) + 4) * TILE;
+      const rh = (Math.floor(Math.random() * 4) + 4) * TILE;
+      
+      // Paredes de habitación
+      for (let x = rx; x < rx + rw; x += TILE) {
+        this.setTile(x, ry, 'wall', true, this.getTile(rx, ry)?.zone || 'ciudad');
+        this.setTile(x, ry + rh - TILE, 'wall', true, this.getTile(rx, ry)?.zone || 'ciudad');
+      }
+      for (let y = ry; y < ry + rh; y += TILE) {
+        this.setTile(rx, y, 'wall', true, this.getTile(rx, ry)?.zone || 'ciudad');
+        this.setTile(rx + rw - TILE, y, 'wall', true, this.getTile(rx, ry)?.zone || 'ciudad');
+      }
+      // Puerta
+      const dx = rx + Math.floor(rw / 2 / TILE) * TILE;
+      this.setTile(dx, ry + rh - TILE, 'floor', false, this.getTile(rx, ry)?.zone || 'ciudad');
+      this.setTile(dx + TILE, ry + rh - TILE, 'floor', false, this.getTile(rx, ry)?.zone || 'ciudad');
+    }
+    
+    // Decoraciones
+    for (let i = 0; i < 200; i++) {
+      const x = Math.random() * WORLD_W;
+      const y = Math.random() * WORLD_H;
+      if (!this.isSolid(x, y)) {
+        this.decorations.push({
+          x, y,
+          type: ['crystal', 'pillar', 'rubble', 'plant', 'orb'][Math.floor(Math.random() * 5)],
+          color: `hsl(${Math.random()*360},60%,50%)`,
+          size: 4 + Math.random() * 8,
+        });
+      }
+    }
+    
+    // Luces dinámicas
+    for (let i = 0; i < 40; i++) {
+      const x = Math.random() * WORLD_W;
+      const y = Math.random() * WORLD_H;
+      if (!this.isSolid(x, y)) {
+        this.lights.push({
+          x, y,
+          radius: 80 + Math.random() * 120,
+          color: [[150,100,255],[255,150,50],[100,200,255],[255,100,100],[100,255,150]][Math.floor(Math.random()*5)],
+          intensity: 0.3 + Math.random() * 0.4,
+          flicker: Math.random() * 0.3,
+          phase: Math.random() * Math.PI * 2,
+        });
+      }
+    }
+  }
+};
+
+// === PALETAS DE ZONA ===
+const PALETTES = {
+  ciudad:    { bg: [12,10,22],  fg: [35,30,50],  wall: [25,22,38],  accent: [80,60,40],  floor: [20,18,30] },
+  velo:      { bg: [8,4,22],    fg: [25,18,50],  wall: [18,10,38],  accent: [80,40,120], floor: [15,8,30] },
+  jardin:    { bg: [6,16,10],   fg: [12,32,22],  wall: [10,22,14],  accent: [30,80,50],  floor: [10,22,15] },
+  torre:     { bg: [14,8,18],   fg: [32,22,42],  wall: [22,16,32],  accent: [70,50,80],  floor: [18,12,25] },
+  abismo:    { bg: [16,2,6],    fg: [40,8,12],   wall: [28,4,8],    accent: [120,25,35], floor: [20,4,8] },
+  espejos:   { bg: [8,12,22],   fg: [22,30,45],  wall: [16,22,38],  accent: [60,80,130], floor: [12,18,32] },
+};
+
+// === JUGADOR ===
+const Player = {
+  x: WORLD_W / 2, y: WORLD_H / 2,
+  vx: 0, vy: 0,
+  width: 24, height: 32,
+  speed: 180,
+  
+  // Stats
+  hp: 120, maxHp: 120,
+  energy: 60, maxEnergy: 60,
+  attack: 18, defense: 6,
+  level: 1, xp: 0, xpToLevel: 100,
+  skillPoints: 0,
+  gold: 0,
+  
+  // Estado
+  inDream: false,
+  corruption: 0,
+  facing: { x: 0, y: 1 },
+  animFrame: 0, animTimer: 0,
+  state: 'idle', // idle, walk, attack, hurt, dodge, parry
+  
+  // Combate
+  attackTimer: 0, attackCooldown: 0.35,
+  comboCount: 0, comboTimer: 0, maxCombo: 5,
+  dodgeTimer: 0, dodgeCooldown: 0, dodgeDuration: 0.3, dodgeSpeed: 350,
+  parryTimer: 0, parryWindow: 0.2, parryCooldown: 0,
+  invincible: 0,
+  staggerTimer: 0,
+  
+  // Equipamiento
+  weapons: [
+    { nombre: 'Espada Onírica', atk: 12, speed: 1.0, range: 40, type: 'sword', rarity: 'épico', element: 'dream' },
+    { nombre: 'Daga de Sombras', atk: 8, speed: 1.4, range: 28, type: 'dagger', rarity: 'raro', element: 'shadow' },
+    { nombre: 'Martillo de Vigilia', atk: 20, speed: 0.7, range: 45, type: 'hammer', rarity: 'raro', element: 'light' },
+    { nombre: 'Bastón del Velo', atk: 10, speed: 1.1, range: 50, type: 'staff', rarity: 'épico', element: 'void' },
+  ],
+  currentWeapon: 0,
+  
+  // Inventario
+  inventory: [
+    { nombre: 'Poción de Vigilia', tipo: 'consumible', efecto: 'curar', cantidad: 3, rareza: 'comun', value: 25 },
+    { nombre: 'Elixir de Energía', tipo: 'consumible', efecto: 'energia', cantidad: 2, rareza: 'comun', value: 20 },
+    { nombre: 'Cristal Onírico', tipo: 'material', cantidad: 5, rareza: 'raro', value: 50 },
+    { nombre: 'Lágrima de Morpha', tipo: 'material', cantidad: 1, rareza: 'legendario', value: 200 },
+    { nombre: 'Llave del Velo', tipo: 'key', cantidad: 1, rareza: 'épico', value: 0 },
+    { nombre: 'Runa de Fuego', tipo: 'rune', cantidad: 2, rareza: 'raro', value: 75, stat: 'attack', bonus: 3 },
+  ],
+  
+  // Habilidades
+  skills: {
+    combate: [
+      { id: 'c1', nombre: 'Combo Triple', desc: 'Desbloquea 3er golpe', cost: 1, unlocked: false, effect: () => { Player.maxCombo = 3; } },
+      { id: 'c2', nombre: 'Golpe Cargado', desc: 'Hold para 2x daño', cost: 1, unlocked: false, effect: () => { Player.chargedAttack = true; } },
+      { id: 'c3', nombre: 'Estocada', desc: 'Ataque frontal perforante', cost: 2, unlocked: false, effect: () => { Player.hasThrust = true; } },
+      { id: 'c4', nombre: 'Furia', desc: '+30% ataque, -30% defensa', cost: 2, unlocked: false, effect: () => { Player.attack = Math.floor(Player.attack * 1.3); } },
+    ],
+    sueno: [
+      { id: 's1', nombre: 'Toque Onírico', desc: 'Daño etéreo a distancia', cost: 1, unlocked: false, effect: () => { Player.hasDreamTouch = true; } },
+      { id: 's2', nombre: 'Caminar Sueños', desc: 'Atraviesa paredes 2s', cost: 2, unlocked: false, effect: () => { Player.hasPhaseWalk = true; } },
+      { id: 's3', nombre: 'Pesadilla', desc: 'Aterroriza enemigos cercanos', cost: 2, unlocked: false, effect: () => { Player.hasNightmare = true; } },
+      { id: 's4', nombre: 'Maestro del Velo', desc: 'Plano sueño sin costo', cost: 3, unlocked: false, effect: () => { Player.freeDreamShift = true; } },
+    ],
+    sombra: [
+      { id: 'sh1', nombre: 'Paso de Sombra', desc: 'Teletransporte corto', cost: 1, unlocked: false, effect: () => { Player.hasShadowStep = true; } },
+      { id: 'sh2', nombre: 'Manto Oscuro', desc: 'Invisibilidad 3s', cost: 2, unlocked: false, effect: () => { Player.hasShadowCloak = true; } },
+      { id: 'sh3', nombre: 'Drenar Vida', desc: 'Roba HP al atacar', cost: 2, unlocked: false, effect: () => { Player.hasLifesteal = true; } },
+    ],
+    luz: [
+      { id: 'l1', nombre: 'Bendición', desc: 'Regenera HP pasivo', cost: 1, unlocked: false, effect: () => { Player.hasRegen = true; } },
+      { id: 'l2', nombre: 'Escudo de Luz', desc: 'Escudo temporal', cost: 2, unlocked: false, effect: () => { Player.hasLightShield = true; } },
+      { id: 'l3', nombre: 'Purificación', desc: 'Reduce corrupción', cost: 2, unlocked: false, effect: () => { Player.corruption = Math.max(0, Player.corruption - 20); } },
+    ],
+  },
+  
+  // Progresión
+  stats: {
+    enemiesKilled: 0, bossesKilled: 0, itemsFound: 0,
+    questsCompleted: 0, distanceTraveled: 0, damageDealt: 0,
+    damageTaken: 0, parriesPerformed: 0, maxComboHit: 0,
+  },
+  
+  // Reputación con facciones
+  reputation: { vigilia: 0, sombras: 0, oniromantes: 0 },
+  
+  get currentWeaponData() { return this.weapons[this.currentWeapon]; },
+  
+  getAtk() {
+    let atk = this.attack + this.currentWeaponData.atk;
+    for (const item of this.inventory) {
+      if (item.tipo === 'rune' && item.stat === 'attack') atk += item.bonus * item.cantidad;
+    }
+    return atk;
+  },
+  
+  getDef() { return this.defense; },
+  
+  heal(amount) {
+    this.hp = Math.min(this.maxHp, this.hp + amount);
+    Particles.emit(this.x, this.y - 20, 8, { color: [50,255,50], speed: 60, life: 0.8, size: 3 });
+    AudioEngine.playPickup();
+  },
+  
+  takeDamage(amount, sourceX, sourceY) {
+    if (this.invincible > 0) return 0;
+    if (this.state === 'parry' && this.parryTimer > 0) {
+      // Perfect parry!
+      AudioEngine.playParry();
+      Particles.emit(this.x, this.y - 16, 12, { color: [255,255,100], speed: 120, life: 0.5, size: 4, glow: true });
+      G.screenShake = 0.1;
+      this.comboTimer = 2;
+      showDamageNumber(this.x, this.y - 30, '¡PARRY!', 'block');
+      return -1; // Signal parry
+    }
+    
+    const def = this.getDef();
+    const dmg = Math.max(1, amount - def);
+    this.hp -= dmg;
+    this.stats.damageTaken += dmg;
+    this.invincible = 0.3;
+    this.staggerTimer = 0.2;
+    
+    // Knockback
+    const dx = this.x - sourceX;
+    const dy = this.y - sourceY;
+    const dist = Math.sqrt(dx*dx + dy*dy) || 1;
+    this.vx += (dx / dist) * 200;
+    this.vy += (dy / dist) * 200;
+    
+    Particles.emit(this.x, this.y - 16, 6, { color: [255,50,50], speed: 80, life: 0.5, size: 3 });
+    AudioEngine.playHit();
+    G.screenShake = 0.15;
+    showDamageNumber(this.x, this.y - 30, dmg.toString(), '');
+    
+    if (this.hp <= 0) {
+      this.hp = 0;
+      gameOver();
+    }
+    return dmg;
+  },
+  
+  attack() {
+    if (this.attackTimer > 0 || this.dodgeTimer > 0 || this.staggerTimer > 0) return null;
+    
+    const w = this.currentWeaponData;
+    this.attackTimer = this.attackCooldown / w.speed;
+    this.state = 'attack';
+    
+    // Combo system
+    if (this.comboTimer > 0) {
+      this.comboCount = Math.min(this.comboCount + 1, this.maxCombo);
+    } else {
+      this.comboCount = 1;
+    }
+    this.comboTimer = 1.5;
+    
+    if (this.comboCount > this.stats.maxComboHit) this.stats.maxComboHit = this.comboCount;
+    
+    // Show combo
+    if (this.comboCount > 1) {
+      const comboEl = document.getElementById('combo-display');
+      comboEl.textContent = `${this.comboCount}x COMBO!`;
+      comboEl.classList.add('show');
+      setTimeout(() => comboEl.classList.remove('show'), 500);
+    }
+    
+    // Calculate damage with combo multiplier
+    const comboMult = 1 + (this.comboCount - 1) * 0.15;
+    const isCharged = this.chargedAttack && G.keys[' '] && this.attackTimer > 0.2;
+    const chargeMult = isCharged ? 2.0 : 1.0;
+    const damage = Math.floor(this.getAtk() * comboMult * chargeMult);
+    
+    // Attack area
+    const attackRange = w.range;
+    const attackAngle = Math.atan2(this.facing.y, this.facing.x);
+    const ax = this.x + Math.cos(attackAngle) * attackRange * 0.5;
+    const ay = this.y + Math.sin(attackAngle) * attackRange * 0.5;
+    
+    // Visual effects
+    const particleColors = {
+      dream: [150,50,255], shadow: [80,40,120], light: [255,220,100],
+      void: [100,50,150], fire: [255,100,30], ice: [100,200,255],
+    };
+    const pColor = particleColors[w.element] || [200,200,255];
+    Particles.emit(ax, ay, 8, { color: pColor, speed: 100, life: 0.4, size: 4, glow: true });
+    
+    // Trail effect
+    for (let i = 0; i < 5; i++) {
+      const t = i / 5;
+      Particles.emit(
+        this.x + Math.cos(attackAngle) * attackRange * t,
+        this.y + Math.sin(attackAngle) * attackRange * t,
+        1, { color: pColor, speed: 20, life: 0.2, size: 2 }
+      );
+    }
+    
+    AudioEngine.playAttack();
+    G.screenShake = 0.05;
+    
+    return { x: ax, y: ay, range: attackRange * 0.6, damage, angle: attackAngle };
+  },
+  
+  dodge() {
+    if (this.dodgeCooldown > 0 || this.energy < 10 || this.dodgeTimer > 0) return;
+    this.dodgeTimer = this.dodgeDuration;
+    this.dodgeCooldown = 0.8;
+    this.energy -= 10;
+    this.invincible = this.dodgeDuration;
+    this.state = 'dodge';
+    
+    const dx = this.vx !== 0 || this.vy !== 0 ? this.vx : this.facing.x * this.speed;
+    const dy = this.vy !== 0 || this.vx !== 0 ? this.vy : this.facing.y * this.speed;
+    const dist = Math.sqrt(dx*dx + dy*dy) || 1;
+    this.vx = (dx / dist) * this.dodgeSpeed;
+    this.vy = (dy / dist) * this.dodgeSpeed;
+    
+    Particles.emit(this.x, this.y, 6, { color: [100,150,255], speed: 60, life: 0.4, size: 3 });
+    AudioEngine.playDodge();
+  },
+  
+  parry() {
+    if (this.parryCooldown > 0 || this.energy < 15) return;
+    this.parryTimer = this.parryWindow;
+    this.parryCooldown = 0.6;
+    this.energy -= 15;
+    this.state = 'parry';
+    this.stats.parriesPerformed++;
+  },
+  
+  switchWeapon(idx) {
+    if (idx >= 0 && idx < this.weapons.length && idx !== this.currentWeapon) {
+      this.currentWeapon = idx;
+      showNotification(`⚔ ${this.weapons[idx].nombre}`, 'item');
+    }
+  },
+  
+  useItem(idx) {
+    const item = this.inventory[idx];
+    if (!item || item.tipo !== 'consumible') return;
+    if (item.efecto === 'curar') {
+      this.heal(item.cantidad || 30);
+      showNotification(`+${item.cantidad || 30} HP`, 'item');
+    } else if (item.efecto === 'energia') {
+      this.energy = Math.min(this.maxEnergy, this.energy + 25);
+      showNotification('+25 Energía', 'item');
+    }
+    item.cantidad--;
+    if (item.cantidad <= 0) this.inventory.splice(idx, 1);
+  },
+  
+  gainXP(amount) {
+    this.xp += amount;
+    while (this.xp >= this.xpToLevel) {
+      this.xp -= this.xpToLevel;
+      this.level++;
+      this.xpToLevel = Math.floor(this.xpToLevel * 1.3);
+      this.skillPoints += 2;
+      this.maxHp += 10;
+      this.hp = this.maxHp;
+      this.maxEnergy += 5;
+      this.energy = this.maxEnergy;
+      this.attack += 2;
+      this.defense += 1;
+      AudioEngine.playLevelUp();
+      showNotification(`¡NIVEL ${this.level}!`, 'xp');
+      Particles.emit(this.x, this.y - 20, 20, { color: [255,215,0], speed: 100, life: 1.5, size: 5, glow: true });
+    }
+  },
+};
+
+// === ENEMIGOS ===
+let Enemies = [];
+
+const ENEMY_DEFS = {
+  sombra_menor: { hp: 35, atk: 8, def: 2, xp: 18, speed: 70, color: [40,20,55], size: 18, behavior: 'chase', xpMult: 1 },
+  cazador_sombras: { hp: 70, atk: 16, def: 5, xp: 40, speed: 100, color: [60,30,75], size: 22, behavior: 'flank', xpMult: 1.5 },
+  devorador: { hp: 150, atk: 28, def: 12, xp: 90, speed: 45, color: [85,20,30], size: 30, behavior: 'tank', xpMult: 2 },
+  tejedor_oscuro: { hp: 90, atk: 20, def: 8, xp: 55, speed: 80, color: [65,20,85], size: 24, behavior: 'ranged', xpMult: 1.8, ranged: true },
+  caballero_caido: { hp: 200, atk: 35, def: 18, xp: 120, speed: 60, color: [50,50,70], size: 28, behavior: 'guard', xpMult: 2.5 },
+  espectro: { hp: 50, atk: 22, def: 0, xp: 45, speed: 120, color: [100,150,200], size: 20, behavior: 'phase', xpMult: 1.3, phasing: true },
+};
+
+function spawnEnemy(type, x, y) {
+  const def = ENEMY_DEFS[type];
+  if (!def) return null;
+  const e = {
+    x, y, type,
+    hp: def.hp, maxHp: def.hp,
+    atk: def.atk, def: def.def,
+    speed: def.speed, color: def.color, size: def.size,
+    behavior: def.behavior,
+    ranged: def.ranged || false,
+    phasing: def.phasing || false,
+    xp: def.xp, xpMult: def.xpMult,
+    alive: true,
+    aiTimer: 0, aiState: 'idle',
+    attackTimer: 0, attackCooldown: 1.2,
     vx: 0, vy: 0,
-    width: 20, height: 28,
-    speed: 150,
-    hp: 100, maxHp: 100,
-    energy: 50, maxEnergy: 50,
-    attack: 15, defense: 5,
-    level: 1, xp: 0, xpToLevel: 100,
-    inDream: false,
-    corruption: 0,
-    gold: 0,
-    facing: { x: 0, y: 1 },
+    staggerTimer: 0,
     animFrame: 0, animTimer: 0,
-    attackTimer: 0, attackCooldown: 0.4,
-    inventory: [
-        { nombre: 'Espada Onírica', tipo: 'arma', ataque: 10, rareza: 'épico' },
-        { nombre: 'Poción de Vigilia', tipo: 'consumible', efecto: 'curar', cantidad: 3, rareza: 'comun' },
-        { nombre: 'Cristal Onírico', tipo: 'material', rareza: 'raro' },
+    facing: { x: 0, y: 1 },
+    patrolAngle: Math.random() * Math.PI * 2,
+    detectionRange: 250,
+    attackRange: def.ranged ? 200 : 45,
+    projectiles: [],
+    phaseTimer: 0,
+    phaseVisible: true,
+  };
+  Enemies.push(e);
+  return e;
+}
+
+function spawnEnemies() {
+  Enemies = [];
+  const types = Object.keys(ENEMY_DEFS);
+  for (let i = 0; i < 50; i++) {
+    const pos = findValidPos();
+    const type = types[Math.floor(Math.random() * types.length)];
+    spawnEnemy(type, pos.x, pos.y);
+  }
+}
+
+// === JEFES ===
+let Bosses = [];
+let currentBoss = null;
+
+const BOSS_DEFS = {
+  arquitecto_corrupto: {
+    nombre: 'El Arquitecto Corrupto',
+    hp: 800, atk: 30, def: 15, xp: 500,
+    color: [120,30,160], size: 48,
+    phases: [
+      { hpThreshold: 0.6, behavior: 'summon', atkMult: 1 },
+      { hpThreshold: 0.3, behavior: 'rage', atkMult: 1.5 },
+      { hpThreshold: 0.1, behavior: 'desperate', atkMult: 2 },
     ],
-    equippedWeapon: 0,
-    skills: [
-        { nombre: 'Toque Onírico', coste: 10, tipo: 'activa' },
-        { nombre: 'Caminar entre Sueños', coste: 0, tipo: 'pasiva' },
-        { nombre: 'Lanza de Pesadilla', coste: 20, tipo: 'activa' },
+    attacks: ['slam', 'wave', 'summon', 'beam'],
+  },
+  devorador_sueños: {
+    nombre: 'El Devorador de Sueños',
+    hp: 1200, atk: 40, def: 20, xp: 800,
+    color: [80,10,80], size: 56,
+    phases: [
+      { hpThreshold: 0.5, behavior: 'split', atkMult: 1 },
+      { hpThreshold: 0.2, behavior: 'void', atkMult: 1.8 },
     ],
+    attacks: ['bite', 'swallow', 'nightmare_blast', 'void_pull'],
+  },
+  vigia_eterno: {
+    nombre: 'El Vigía Eterno',
+    hp: 1500, atk: 35, def: 25, xp: 1000,
+    color: [200,180,100], size: 52,
+    phases: [
+      { hpThreshold: 0.7, behavior: 'shield', atkMult: 0.8 },
+      { hpThreshold: 0.4, behavior: 'laser', atkMult: 1.3 },
+      { hpThreshold: 0.15, behavior: 'supernova', atkMult: 2 },
+    ],
+    attacks: ['slash', 'shield_bash', 'holy_beam', 'supernova'],
+  },
 };
 
-// Enemigos
-let enemies = [];
-const ENEMY_TYPES = {
-    sombra_menor: { hp: 30, atk: 8, def: 2, xp: 15, speed: 60, color: [40, 20, 50], size: 18 },
-    cazador_sombras: { hp: 60, atk: 15, def: 5, xp: 35, speed: 90, color: [60, 30, 70], size: 22 },
-    devorador: { hp: 120, atk: 25, def: 10, xp: 80, speed: 40, color: [80, 20, 30], size: 28 },
-    tejedor_oscuro: { hp: 80, atk: 18, def: 7, xp: 50, speed: 70, color: [60, 20, 80], size: 24 },
-};
+function spawnBoss(bossId, x, y) {
+  const def = BOSS_DEFS[bossId];
+  if (!def) return null;
+  const boss = {
+    x, y, id: bossId, ...def,
+    maxHp: def.hp, alive: true,
+    aiTimer: 0, aiState: 'idle',
+    attackTimer: 0, attackCooldown: 2,
+    vx: 0, vy: 0,
+    staggerTimer: 0,
+    currentPhase: 0,
+    phaseTransition: false,
+    animFrame: 0, animTimer: 0,
+    facing: { x: 0, y: 1 },
+    arenaRadius: 300,
+    enraged: false,
+  };
+  Bosses.push(boss);
+  currentBoss = boss;
+  
+  // Show boss health bar
+  const bh = document.getElementById('boss-health');
+  bh.classList.add('show');
+  document.getElementById('boss-name').textContent = def.nombre;
+  const phasesEl = document.getElementById('boss-phases');
+  phasesEl.innerHTML = '';
+  for (let i = 0; i < def.phases.length + 1; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'boss-phase-dot' + (i === 0 ? ' active' : '');
+    phasesEl.appendChild(dot);
+  }
+  
+  AudioEngine.playBossMusic();
+  showMessage(`⚔ ${def.nombre} aparece!`);
+  return boss;
+}
 
-// NPCs
-let npcs = [];
-const NPC_DATA = [
-    { nombre: 'Kael', color: [50, 150, 200], dialogos: [
-        'Bienvenido, Oniromante. El Velo se debilita.',
-        'Ten cuidado en los sueños. No todo es lo que parece.',
-        'Las sombras son más fuertes de noche.',
-        'Busca los Pilares del Sueño. Son la clave.',
-    ]},
-    { nombre: 'Lyra', color: [150, 80, 200], dialogos: [
-        '¿Puedes verlos? Los hilos del sueño...',
-        'Hay algo roto en el centro del Velo.',
-        'Sueños dentro de sueños dentro de sueños...',
-        'El Arquitecto Corrupto fue alguien bueno una vez.',
-    ]},
-    { nombre: 'Mercader', color: [200, 150, 50], dialogos: [
-        'Tengo mercancía de ambos mundos.',
-        'Lágrimas de Morpha, recién cosechadas.',
-        '¿Necesitas una poción? Te salvará la vida.',
-        'Los sueños tienen un precio. ¿Puedes pagarlo?',
-    ]},
+// === NPCs ===
+let NPCs = [];
+
+const NPC_DEFS = [
+  {
+    id: 'kael', nombre: 'Kael', emoji: '🧙',
+    color: [50,150,200], zone: 'ciudad',
+    dialogues: [
+      { text: 'Bienvenido, Oniromante. El Velo se debilita cada día más.', choices: [
+        { text: '¿Qué es el Velo?', next: 1, effect: () => {} },
+        { text: '¿Cómo puedo ayudar?', next: 2, effect: () => {} },
+        { text: 'Adiós.', next: -1, effect: () => {} },
+      ]},
+      { text: 'El Velo es la barrera entre el mundo despierto y el plano onírico. Si cae, la realidad y los sueños se fusionarán en caos.', choices: [
+        { text: '¿Quién lo debilita?', next: 3, effect: () => {} },
+        { text: 'Entiendo. Adiós.', next: -1, effect: () => {} },
+      ]},
+      { text: 'Busca los Pilares del Sueño. Hay 4 dispersos por el mundo. Cada uno fortalece el Velo. Sin ellos, el Arquitecto Corrupto triunfará.', choices: [
+        { text: 'Los encontraré.', next: -1, effect: () => { startQuest('pilares_sueno'); } },
+        { text: 'Primero necesito prepararme.', next: -1, effect: () => {} },
+      ]},
+      { text: 'El Arquitecto Corrupto. Alguien que fue como tú, un Oniromante, pero sucumbió a la corrupción del sueño. Ahora quiere fusionar ambos mundos.', choices: [
+        { text: 'No dejaré que lo logre.', next: -1, effect: () => { Player.reputation.oniromantes += 5; } },
+      ]},
+    ],
+    hasQuest: 'pilares_sueno',
+  },
+  {
+    id: 'lyra', nombre: 'Lyra', emoji: '🔮',
+    color: [150,80,200], zone: 'velo',
+    dialogues: [
+      { text: '¿Puedes verlos? Los hilos del sueño que conectan todo...', choices: [
+        { text: '¿Hilos del sueño?', next: 1, effect: () => {} },
+        { text: 'No veo nada.', next: 2, effect: () => {} },
+        { text: 'Adiós.', next: -1, effect: () => {} },
+      ]},
+      { text: 'Todo está conectado. Cada ser vivo emite un hilo. Los Oniromantes podemos verlos y manipularlos. Tú tienes un potencial enorme.', choices: [
+        { text: 'Enséñame.', next: -1, effect: () => { Player.skillPoints += 1; showNotification('+1 Punto de Habilidad', 'xp'); } },
+        { text: 'Gracias, Lyra.', next: -1, effect: () => {} },
+      ]},
+      { text: 'No te preocupes. Con el tiempo los verás. El sueño se revela a quienes lo buscan con paciencia.', choices: [
+        { text: 'Seguiré buscando.', next: -1, effect: () => {} },
+      ]},
+    ],
+  },
+  {
+    id: 'mercader', nombre: 'Zephyr', emoji: '💰',
+    color: [200,150,50], zone: 'ciudad',
+    dialogues: [
+      { text: '¡Bienvenido! Tengo mercancía de ambos mundos. ¿Qué necesitas?', choices: [
+        { text: 'Ver wares.', next: -1, effect: () => { openShop(); } },
+        { text: '¿Has oído algo?', next: 1, effect: () => {} },
+        { text: 'Solo miraba.', next: -1, effect: () => {} },
+      ]},
+      { text: 'Dicen que en el Abismo hay un portal al plano onírico puro. Pero nadie que entra... vuelve siendo el mismo.', choices: [
+        { text: 'Interesante...', next: -1, effect: () => {} },
+      ]},
+    ],
+    isShop: true,
+  },
+  {
+    id: 'herrero', nombre: 'Forjador Umbra', emoji: '⚒',
+    color: [180,100,50], zone: 'torre',
+    dialogues: [
+      { text: 'Forjo armas con esencia de sueño. Si traes materiales, puedo crear cosas extraordinarias.', choices: [
+        { text: 'Ver recetas.', next: -1, effect: () => { openCrafting(); } },
+        { text: '¿Qué necesitas?', next: 1, effect: () => {} },
+        { text: 'Luego vuelvo.', next: -1, effect: () => {} },
+      ]},
+      { text: 'Cristales Oníricos y Lágrimas de Morpha. Esos son los materiales que necesito para forgar equipamiento legendario.', choices: [
+        { text: 'Los traeré.', next: -1, effect: () => { startQuest('materiales_legendarios'); } },
+      ]},
+    ],
+  },
 ];
 
-// Items en el mundo
-let worldItems = [];
+function spawnNPCs() {
+  NPCs = [];
+  for (const def of NPC_DEFS) {
+    const pos = findValidPos();
+    NPCs.push({
+      ...def,
+      x: pos.x, y: pos.y,
+      dialogueIndex: 0,
+      interacted: false,
+      size: 24,
+    });
+  }
+}
 
-// Mundo (tiles)
-let worldTiles = [];
-let currentZone = 'ciudad';
+// === QUESTS ===
+let Quests = [];
+const QUEST_DEFS = {
+  pilares_sueno: {
+    nombre: 'Los Pilares del Sueño',
+    desc: 'Encuentra los 4 Pilares del Sueño dispersos por el mundo.',
+    objectives: [
+      { type: 'collect', item: 'pilar_sueno', current: 0, target: 4 },
+    ],
+    reward: { xp: 300, item: 'arma_pilar', gold: 100 },
+    faction: 'oniromantes',
+  },
+  materiales_legendarios: {
+    nombre: 'Materiales Legendarios',
+    desc: 'Recolecta materiales raros para el forjador.',
+    objectives: [
+      { type: 'collect', item: 'cristal_onirico', current: 0, target: 5 },
+      { type: 'collect', item: 'lagrima_morpha', current: 0, target: 2 },
+    ],
+    reward: { xp: 200, item: 'armadura_sueño', gold: 150 },
+    faction: 'vigilia',
+  },
+};
 
-// Partículas
-let particles = [];
+function startQuest(id) {
+  const def = QUEST_DEFS[id];
+  if (!def || Quests.find(q => q.id === id)) return;
+  Quests.push({ id, ...def, active: true, completed: false });
+  showQuestNotification(`⚜ Misión: ${def.nombre}`);
+}
 
-// Mensajes
-let messageTimer = 0;
-let messageText = '';
-
-// Diálogo
-let dialogActive = false;
-let dialogSpeaker = '';
-let dialogText = '';
+// === SISTEMA DE DIÁLOGOS ===
+let currentDialog = null;
 let dialogNPC = null;
+let dialogChoices = [];
 
-// Tiempo
-let lastTime = 0;
-let deltaTime = 0;
-
-// ==============================================================================
-// GENERACIÓN DEL MUNDO
-// ==============================================================================
-
-function generateWorld() {
-    worldTiles = [];
-    enemies = [];
-    npcs = [];
-    worldItems = [];
-    
-    const worldW = 2000;
-    const worldH = 2000;
-    
-    // Suelo
-    for (let x = 0; x < worldW; x += 32) {
-        for (let y = 0; y < worldH; y += 32) {
-            const isWall = x === 0 || y === 0 || x >= worldW - 32 || y >= worldH - 32;
-            worldTiles.push({
-                x, y,
-                type: isWall ? 'wall' : 'floor',
-                solid: isWall,
-            });
-        }
-    }
-    
-    // Habitaciones
-    for (let i = 0; i < 15; i++) {
-        const rw = Math.floor(Math.random() * 6 + 4) * 32;
-        const rh = Math.floor(Math.random() * 4 + 4) * 32;
-        const rx = Math.floor(Math.random() * (worldW - rw - 100) / 32) * 32 + 64;
-        const ry = Math.floor(Math.random() * (worldH - rh - 100) / 32) * 32 + 64;
-        
-        for (let x = rx; x < rx + rw; x += 32) {
-            setTile(x, ry, 'wall', true);
-            setTile(x, ry + rh - 32, 'wall', true);
-        }
-        for (let y = ry; y < ry + rh; y += 32) {
-            setTile(rx, y, 'wall', true);
-            setTile(rx + rw - 32, y, 'wall', true);
-        }
-        
-        // Puerta
-        const doorX = rx + Math.floor(rw / 2 / 32) * 32 - 16;
-        const doorY = ry + rh - 32;
-        setTile(doorX, doorY, 'floor', false);
-        setTile(doorX + 16, doorY, 'floor', false);
-    }
-    
-    // Enemigos
-    for (let i = 0; i < 20; i++) {
-        const pos = findValidPosition();
-        const types = Object.keys(ENEMY_TYPES);
-        const type = types[Math.floor(Math.random() * types.length)];
-        const data = ENEMY_TYPES[type];
-        enemies.push({
-            x: pos.x, y: pos.y,
-            type, ...data,
-            maxHp: data.hp,
-            alive: true,
-            aiTimer: 0,
-            aiState: 'idle',
-            attackTimer: 0,
-            vx: 0, vy: 0,
-        });
-    }
-    
-    // NPCs
-    for (const data of NPC_DATA) {
-        const pos = findValidPosition();
-        npcs.push({
-            x: pos.x, y: pos.y,
-            nombre: data.nombre,
-            color: data.color,
-            dialogos: data.dialogos,
-            dialogoIndex: 0,
-        });
-    }
-    
-    // Items
-    for (let i = 0; i < 12; i++) {
-        const pos = findValidPosition();
-        const items = [
-            { nombre: 'Poción de Vigilia', tipo: 'consumible', efecto: 'curar', rareza: 'comun' },
-            { nombre: 'Cristal Onírico', tipo: 'material', rareza: 'raro' },
-            { nombre: 'Lágrima de Morpha', tipo: 'material', rareza: 'legendario' },
-            { nombre: 'Llave del Velo', tipo: 'llave', rareza: 'épico' },
-        ];
-        worldItems.push({ x: pos.x, y: pos.y, item: items[Math.floor(Math.random() * items.length)] });
-    }
+function startDialog(npc) {
+  dialogNPC = npc;
+  currentDialog = npc.dialogues[0];
+  G.state = 'dialog';
+  document.getElementById('dialog-box').classList.add('show');
+  document.getElementById('dialog-portrait').textContent = npc.emoji;
+  document.getElementById('dialog-speaker').textContent = npc.nombre;
+  document.getElementById('dialog-text').textContent = currentDialog.text;
+  
+  const choicesEl = document.getElementById('dialog-choices');
+  choicesEl.innerHTML = '';
+  dialogChoices = currentDialog.choices || [];
+  dialogChoices.forEach((c, i) => {
+    const div = document.createElement('div');
+    div.className = 'dialog-choice';
+    div.textContent = `${i+1}. ${c.text}`;
+    div.onclick = () => selectDialogChoice(i);
+    choicesEl.appendChild(div);
+  });
 }
 
-function setTile(x, y, type, solid) {
-    const idx = worldTiles.findIndex(t => t.x === x && t.y === y);
-    if (idx >= 0) {
-        worldTiles[idx] = { x, y, type, solid };
-    } else {
-        worldTiles.push({ x, y, type, solid });
-    }
+function selectDialogChoice(idx) {
+  if (!currentDialog || !currentDialog.choices[idx]) return;
+  const choice = currentDialog.choices[idx];
+  if (choice.effect) choice.effect();
+  if (choice.next === -1) {
+    closeDialog();
+  } else if (choice.next !== undefined && dialogNPC.dialogues[choice.next]) {
+    currentDialog = dialogNPC.dialogues[choice.next];
+    document.getElementById('dialog-text').textContent = currentDialog.text;
+    const choicesEl = document.getElementById('dialog-choices');
+    choicesEl.innerHTML = '';
+    dialogChoices = currentDialog.choices || [];
+    dialogChoices.forEach((c, i) => {
+      const div = document.createElement('div');
+      div.className = 'dialog-choice';
+      div.textContent = `${i+1}. ${c.text}`;
+      div.onclick = () => selectDialogChoice(i);
+      choicesEl.appendChild(div);
+    });
+  }
 }
 
-function findValidPosition() {
-    for (let i = 0; i < 100; i++) {
-        const x = Math.random() * 1800 + 100;
-        const y = Math.random() * 1800 + 100;
-        let valid = true;
-        for (const tile of worldTiles) {
-            if (tile.solid && Math.abs(tile.x - x) < 40 && Math.abs(tile.y - y) < 40) {
-                valid = false;
-                break;
-            }
-        }
-        if (valid) return { x, y };
-    }
-    return { x: 300, y: 300 };
+function closeDialog() {
+  G.state = 'playing';
+  document.getElementById('dialog-box').classList.remove('show');
+  currentDialog = null;
+  dialogNPC = null;
 }
 
-function getTilesNear(x, y, radius) {
-    return worldTiles.filter(t => Math.abs(t.x - x) < radius + 32 && Math.abs(t.y - y) < radius + 32);
+// === CRAFTING ===
+const CRAFT_RECIPES = [
+  { nombre: 'Espada del Amanecer', ingredients: [{ item: 'cristal_onirico', qty: 3 }, { item: 'lagrima_morpha', qty: 1 }], result: { nombre: 'Espada del Amanecer', atk: 25, type: 'sword', element: 'light', rarity: 'legendario' } },
+  { nombre: 'Armadura Onírica', ingredients: [{ item: 'cristal_onirico', qty: 5 }], result: { nombre: 'Armadura Onírica', def: 15, type: 'armor', rarity: 'épico' } },
+  { nombre: 'Poción Mayor', ingredients: [{ item: 'cristal_onirico', qty: 2 }], result: { nombre: 'Poción Mayor', tipo: 'consumible', efecto: 'curar', cantidad: 5, rareza: 'raro' } },
+  { nombre: 'Runa de Poder', ingredients: [{ item: 'lagrima_morpha', qty: 1 }], result: { nombre: 'Runa de Poder', tipo: 'rune', stat: 'attack', bonus: 5, rareza: 'legendario' } },
+];
+
+function canCraft(recipe) {
+  for (const ing of recipe.ingredients) {
+    const inv = Player.inventory.find(i => i.nombre.toLowerCase().includes(ing.item.replace('_', ' ')) || i.nombre === ing.item);
+    if (!inv || inv.cantidad < ing.qty) return false;
+  }
+  return true;
 }
 
-// ==============================================================================
-// INPUT
-// ==============================================================================
-
-document.addEventListener('keydown', (e) => {
-    game.keys[e.key] = true;
-    game.keys[e.code] = true;
-    
-    if (game.state === 'playing') {
-        if (e.key === 'e' || e.key === 'E') {
-            if (dialogActive) {
-                advanceDialog();
-            } else {
-                interact();
-            }
-        }
-        if (e.key === 'q' || e.key === 'Q') {
-            toggleDream();
-        }
-        if (e.key === 'i' || e.key === 'I') {
-            showMessage('Inventario: ' + player.inventory.map(i => i.nombre).join(', '));
-        }
-        if (e.key === 'k' || e.key === 'K') {
-            showMessage('Habilidades: ' + player.skills.map(s => s.nombre).join(', '));
-        }
+function craft(recipe) {
+  if (!canCraft(recipe)) return;
+  for (const ing of recipe.ingredients) {
+    const inv = Player.inventory.find(i => i.nombre.toLowerCase().includes(ing.item.replace('_', ' ')) || i.nombre === ing.item);
+    if (inv) {
+      inv.cantidad -= ing.qty;
+      if (inv.cantidad <= 0) {
+        const idx = Player.inventory.indexOf(inv);
+        if (idx >= 0) Player.inventory.splice(idx, 1);
+      }
     }
-    
-    if (e.key === ' ') e.preventDefault();
-});
-
-document.addEventListener('keyup', (e) => {
-    game.keys[e.key] = false;
-    game.keys[e.code] = false;
-});
-
-// ==============================================================================
-// GAMEPLAY
-// ==============================================================================
-
-function toggleDream() {
-    if (player.energy >= 20) {
-        player.inDream = !player.inDream;
-        player.energy -= 20;
-        const plano = player.inDream ? 'SUEÑO' : 'REALIDAD';
-        showMessage(`Transición al plano: ${plano}`);
-        
-        // Partículas de transición
-        for (let i = 0; i < 15; i++) {
-            particles.push({
-                x: player.x, y: player.y,
-                vx: (Math.random() - 0.5) * 100,
-                vy: (Math.random() - 0.5) * 100,
-                life: 1, maxLife: 1,
-                color: player.inDream ? [150, 50, 200] : [50, 100, 200],
-                size: 4,
-            });
-        }
-    } else {
-        showMessage('No tienes suficiente energía para cambiar de plano.');
-    }
+  }
+  const result = { ...recipe.result, cantidad: 1 };
+  const existing = Player.inventory.find(i => i.nombre === result.nombre);
+  if (existing && result.tipo === 'consumible') existing.cantidad += 1;
+  else Player.inventory.push(result);
+  showNotification(`⚒ Crafteado: ${result.nombre}`, 'item');
+  AudioEngine.playPickup();
+  updateCraftingUI();
 }
 
-function interact() {
-    // Buscar NPCs cercanos
-    for (const npc of npcs) {
-        const dist = Math.hypot(npc.x - player.x, npc.y - player.y);
-        if (dist < 50) {
-            dialogActive = true;
-            dialogSpeaker = npc.nombre;
-            dialogText = npc.dialogos[npc.dialogoIndex % npc.dialogos.length];
-            npc.dialogoIndex++;
-            dialogNPC = npc;
-            return;
+// === FUNCIONES DE UTILIDAD ===
+function findValidPos() {
+  for (let i = 0; i < 200; i++) {
+    const x = Math.random() * (WORLD_W - 200) + 100;
+    const y = Math.random() * (WORLD_H - 200) + 100;
+    if (!World.isSolid(x, y)) return { x, y };
+  }
+  return { x: WORLD_W/2 + Math.random()*200, y: WORLD_H/2 + Math.random()*200 };
+}
+
+function dist(a, b) { return Math.sqrt((a.x-b.x)**2 + (a.y-b.y)**2); }
+function angleTo(from, to) { return Math.atan2(to.y - from.y, to.x - from.x); }
+function lerp(a, b, t) { return a + (b - a) * t; }
+function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+// === UI FUNCTIONS ===
+function showMessage(text, duration = 2500) {
+  const el = document.getElementById('message-box');
+  el.textContent = text;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), duration);
+}
+
+function showNotification(text, type = 'item') {
+  const container = document.getElementById('notifications');
+  const el = document.createElement('div');
+  el.className = `notification ${type}`;
+  el.textContent = text;
+  container.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+function showQuestNotification(text) {
+  showNotification(text, 'quest');
+}
+
+function showDamageNumber(x, y, text, type) {
+  const container = document.getElementById('damage-numbers');
+  const el = document.createElement('div');
+  el.className = `damage-number ${type}`;
+  el.textContent = text;
+  el.style.left = (x - G.camera.x + CANVAS_W/2) + 'px';
+  el.style.top = (y - G.camera.y + CANVAS_H/2 - 20) + 'px';
+  container.appendChild(el);
+  setTimeout(() => el.remove(), 800);
+}
+
+function showZoneIndicator(name) {
+  const el = document.getElementById('zone-indicator');
+  el.textContent = name;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+function showInteractPrompt(text) {
+  const el = document.getElementById('interact-prompt');
+  el.textContent = `[E] ${text}`;
+  el.classList.add('show');
+}
+
+function hideInteractPrompt() {
+  document.getElementById('interact-prompt').classList.remove('show');
+}
+
+function flashScreen(type) {
+  const el = document.getElementById('screen-flash');
+  el.className = type;
+  el.style.opacity = '1';
+  setTimeout(() => { el.style.opacity = '0'; }, 150);
+}
+
+// === UPDATE HUD ===
+function updateHUD() {
+  const hpPct = (Player.hp / Player.maxHp) * 100;
+  const enPct = (Player.energy / Player.maxEnergy) * 100;
+  const xpPct = (Player.xp / Player.xpToLevel) * 100;
+  const corrPct = Player.corruption;
+  
+  document.getElementById('hp-bar').style.width = hpPct + '%';
+  document.getElementById('hp-text').textContent = `${Math.ceil(Player.hp)}/${Player.maxHp}`;
+  document.getElementById('energy-bar').style.width = enPct + '%';
+  document.getElementById('energy-text').textContent = `${Math.ceil(Player.energy)}/${Player.maxEnergy}`;
+  document.getElementById('xp-bar').style.width = xpPct + '%';
+  document.getElementById('xp-text').textContent = `${Player.xp}/${Player.xpToLevel}`;
+  document.getElementById('corr-bar').style.width = corrPct + '%';
+  document.getElementById('corr-text').textContent = `${corrPct}%`;
+  document.getElementById('level-display').textContent = `NIVEL ${Player.level}`;
+  
+  // Zone
+  const tile = World.getTile(Player.x, Player.y);
+  const zone = tile?.zone || 'ciudad';
+  const zoneNames = { ciudad: 'Ciudad Despierta', velo: 'El Velo', jardin: 'Jardín Onírico', torre: 'Torre de los Vigías', abismo: 'El Abismo', espejos: 'Palacio de Espejos' };
+  document.getElementById('zone-display').textContent = zoneNames[zone] || zone;
+  document.getElementById('plane-display').textContent = Player.inDream ? '◈ PLANO ONÍRICO' : '◈ MUNDO DESPIERTO';
+  document.getElementById('plane-display').style.color = Player.inDream ? '#9b59b6' : '#4169e1';
+  
+  // Time
+  const hours = Math.floor(G.dayTime);
+  const mins = Math.floor((G.dayTime % 1) * 60);
+  document.getElementById('time-display').textContent = `${hours.toString().padStart(2,'0')}:${mins.toString().padStart(2,'0')}`;
+  
+  // Boss health
+  if (currentBoss && currentBoss.alive) {
+    const bossHpPct = (currentBoss.hp / currentBoss.maxHp) * 100;
+    document.getElementById('boss-bar').style.width = bossHpPct + '%';
+  }
+}
+
+// === INVENTORY UI ===
+function openInventory() {
+  G.state = 'inventory';
+  document.getElementById('inventory-overlay').classList.add('show');
+  updateInventoryUI();
+}
+
+function closeInventory() {
+  G.state = 'playing';
+  document.getElementById('inventory-overlay').classList.remove('show');
+}
+
+function updateInventoryUI() {
+  const grid = document.getElementById('inv-grid');
+  grid.innerHTML = '';
+  Player.inventory.forEach((item, idx) => {
+    const div = document.createElement('div');
+    div.className = `inv-slot rarity-${item.rareza || 'comun'}`;
+    div.innerHTML = `
+      <div class="inv-slot-name rarity-${item.rareza || 'comun'}">${item.nombre}</div>
+      <div class="inv-slot-type">${item.tipo}</div>
+      <div class="inv-slot-stats">${item.ataque ? `ATK +${item.ataque}` : ''} ${item.efecto ? item.efecto : ''}</div>
+      ${item.cantidad > 1 ? `<div class="inv-slot-count">x${item.cantidad}</div>` : ''}
+    `;
+    div.onclick = () => {
+      if (item.tipo === 'consumible') Player.useItem(idx);
+      updateInventoryUI();
+    };
+    grid.appendChild(div);
+  });
+}
+
+// === SKILLS UI ===
+function openSkills() {
+  G.state = 'skills';
+  document.getElementById('skills-overlay').classList.add('show');
+  updateSkillsUI();
+}
+
+function closeSkills() {
+  G.state = 'playing';
+  document.getElementById('skills-overlay').classList.remove('show');
+}
+
+function updateSkillsUI() {
+  document.getElementById('skill-points').textContent = `Puntos de Habilidad: ${Player.skillPoints}`;
+  const tree = document.getElementById('skill-tree');
+  tree.innerHTML = '';
+  const branches = [
+    { key: 'combate', name: '⚔ Combate', class: 'combate' },
+    { key: 'sueno', name: '🌙 Sueño', class: 'sueno' },
+    { key: 'sombra', name: '🌑 Sombra', class: 'sombra' },
+    { key: 'luz', name: '☀ Luz', class: 'luz' },
+  ];
+  for (const b of branches) {
+    const div = document.createElement('div');
+    div.className = `skill-branch ${b.class}`;
+    div.innerHTML = `<h3>${b.name}</h3>`;
+    for (const skill of Player.skills[b.key]) {
+      const nd = document.createElement('div');
+      nd.className = 'skill-node' + (skill.unlocked ? ' unlocked' : '');
+      nd.innerHTML = `<span class="skill-node-name">${skill.nombre}</span><span class="skill-node-cost">${skill.unlocked ? '✓' : skill.cost + ' pt'}</span>`;
+      nd.onclick = () => {
+        if (!skill.unlocked && Player.skillPoints >= skill.cost) {
+          Player.skillPoints -= skill.cost;
+          skill.unlocked = true;
+          if (skill.effect) skill.effect();
+          showNotification(`✦ ${skill.nombre} desbloqueado!`, 'xp');
+          AudioEngine.playLevelUp();
+          updateSkillsUI();
         }
+      };
+      div.appendChild(nd);
     }
-    
-    // Buscar items cercanos
-    for (let i = worldItems.length - 1; i >= 0; i--) {
-        const item = worldItems[i];
-        const dist = Math.hypot(item.x - player.x, item.y - player.y);
-        if (dist < 30) {
-            player.inventory.push(item.item);
-            showMessage(`Recogiste: ${item.item.nombre}`);
-            worldItems.splice(i, 1);
-            // Partículas
-            for (let j = 0; j < 8; j++) {
-                particles.push({
-                    x: item.x, y: item.y,
-                    vx: (Math.random() - 0.5) * 60,
-                    vy: (Math.random() - 0.5) * 60,
-                    life: 0.8, maxLife: 0.8,
-                    color: [220, 180, 60],
-                    size: 3,
-                });
-            }
-            return;
-        }
-    }
+    tree.appendChild(div);
+  }
 }
 
-function advanceDialog() {
-    if (dialogNPC && dialogNPC.dialogoIndex < dialogNPC.dialogos.length) {
-        dialogText = dialogNPC.dialogos[dialogNPC.dialogoIndex % dialogNPC.dialogos.length];
-        dialogNPC.dialogoIndex++;
-    } else {
-        dialogActive = false;
-        dialogNPC = null;
-    }
+// === CRAFTING UI ===
+function openCrafting() {
+  G.state = 'crafting';
+  document.getElementById('crafting-overlay').classList.add('show');
+  updateCraftingUI();
 }
 
-function showMessage(text) {
-    messageText = text;
-    messageTimer = 3;
+function closeCrafting() {
+  G.state = 'playing';
+  document.getElementById('crafting-overlay').classList.remove('show');
 }
 
-function playerAttack() {
-    if (player.attackTimer > 0) return;
-    player.attackTimer = player.attackCooldown;
-    
-    const attackRange = 40;
-    let hit = false;
-    
-    for (const enemy of enemies) {
-        if (!enemy.alive) continue;
-        const dist = Math.hypot(enemy.x - player.x, enemy.y - player.y);
-        if (dist < attackRange) {
-            let dmg = player.attack - enemy.def + Math.floor(Math.random() * 5) - 2;
-            if (player.inDream) dmg = Math.floor(dmg * 1.5);
-            dmg = Math.max(1, dmg);
-            enemy.hp -= dmg;
-            hit = true;
-            
-            // Partículas de impacto
-            for (let i = 0; i < 5; i++) {
-                particles.push({
-                    x: enemy.x, y: enemy.y,
-                    vx: (Math.random() - 0.5) * 80,
-                    vy: (Math.random() - 0.5) * 80,
-                    life: 0.5, maxLife: 0.5,
-                    color: [200, 50, 50],
-                    size: 3,
-                });
-            }
-            
-            if (enemy.hp <= 0) {
-                enemy.alive = false;
-                player.xp += enemy.xp;
-                showMessage(`¡${enemy.type} derrotado! +${enemy.xp} XP`);
-                
-                // Drop item
-                if (Math.random() < 0.3) {
-                    worldItems.push({
-                        x: enemy.x, y: enemy.y,
-                        item: { nombre: 'Cristal Onírico', tipo: 'material', rareza: 'raro' }
-                    });
-                }
-                
-                // Level up
-                if (player.xp >= player.xpToLevel) {
-                    player.level++;
-                    player.xp -= player.xpToLevel;
-                    player.xpToLevel = Math.floor(player.xpToLevel * 1.5);
-                    player.maxHp += 10;
-                    player.hp = player.maxHp;
-                    player.maxEnergy += 5;
-                    player.energy = player.maxEnergy;
-                    player.attack += 3;
-                    player.defense += 1;
-                    showMessage(`¡NIVEL ${player.level}!`);
-                }
-            }
-            break;
-        }
-    }
-    
-    if (!hit) {
-        // Partículas de swing
-        const sx = player.x + player.facing.x * 20;
-        const sy = player.y + player.facing.y * 20;
-        for (let i = 0; i < 3; i++) {
-            particles.push({
-                x: sx, y: sy,
-                vx: player.facing.x * 50 + (Math.random() - 0.5) * 30,
-                vy: player.facing.y * 50 + (Math.random() - 0.5) * 30,
-                life: 0.3, maxLife: 0.3,
-                color: [200, 200, 255],
-                size: 2,
-            });
-        }
-    }
+function updateCraftingUI() {
+  const container = document.getElementById('craft-recipes');
+  container.innerHTML = '';
+  for (const recipe of CRAFT_RECIPES) {
+    const can = canCraft(recipe);
+    const div = document.createElement('div');
+    div.className = 'craft-recipe' + (can ? ' can-craft' : '');
+    const ings = recipe.ingredients.map(i => `${i.qty}x ${i.item.replace(/_/g, ' ')}`).join(', ');
+    div.innerHTML = `
+      <div>
+        <div class="craft-recipe-name rarity-${recipe.result.rarity}">${recipe.nombre}</div>
+        <div class="craft-recipe-ingredientes">${ings}</div>
+      </div>
+      <div style="font-size:11px;color:${can ? '#32cd32' : '#666'}">${can ? '✓ Disponible' : '✗ Faltan materiales'}</div>
+    `;
+    div.onclick = () => { if (can) craft(recipe); };
+    container.appendChild(div);
+  }
 }
 
-function updatePlayer(dt) {
-    // Movimiento
-    let dx = 0, dy = 0;
-    if (game.keys['w'] || game.keys['W'] || game.keys['ArrowUp']) dy = -1;
-    if (game.keys['s'] || game.keys['S'] || game.keys['ArrowDown']) dy = 1;
-    if (game.keys['a'] || game.keys['A'] || game.keys['ArrowLeft']) dx = -1;
-    if (game.keys['d'] || game.keys['D'] || game.keys['ArrowRight']) dx = 1;
-    
-    if (dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707; }
-    
-    if (!dialogActive) {
-        player.vx = dx * player.speed;
-        player.vy = dy * player.speed;
-    } else {
-        player.vx = 0;
-        player.vy = 0;
-    }
-    
-    if (dx !== 0 || dy !== 0) {
-        player.facing = { x: dx || player.facing.x, y: dy || player.facing.y };
-    }
-    
-    // Aplicar velocidad
-    const newX = player.x + player.vx * dt;
-    const newY = player.y + player.vy * dt;
-    
-    // Colisión con tiles
-    let canMoveX = true, canMoveY = true;
-    for (const tile of getTilesNear(newX, newY, 32)) {
-        if (tile.solid) {
-            const tx = tile.x, ty = tile.y;
-            if (newX + player.width/2 > tx && newX - player.width/2 < tx + 32 &&
-                player.y + player.height/2 > ty && player.y - player.height/2 < ty + 32) {
-                canMoveX = false;
-            }
-            if (player.x + player.width/2 > tx && player.x - player.width/2 < tx + 32 &&
-                newY + player.height/2 > ty && newY - player.height/2 < ty + 32) {
-                canMoveY = false;
-            }
-        }
-    }
-    
-    if (canMoveX) player.x = newX;
-    if (canMoveY) player.y = newY;
-    
-    // Bounds
-    player.x = Math.max(30, Math.min(1970, player.x));
-    player.y = Math.max(30, Math.min(1970, player.y));
-    
-    // Ataque
-    if (game.keys[' '] && !dialogActive) {
-        playerAttack();
-    }
-    player.attackTimer = Math.max(0, player.attackTimer - dt);
-    
-    // Animación
-    player.animTimer += dt;
-    if (player.animTimer > 0.15) {
-        player.animTimer = 0;
-        player.animFrame = (player.animFrame + 1) % 4;
-    }
-    
-    // Energía
-    if (player.inDream) {
-        player.energy = Math.max(0, player.energy - 3 * dt);
-        player.corruption = Math.min(100, player.corruption + 0.8 * dt);
-        if (player.energy <= 0) {
-            player.inDream = false;
-            showMessage('¡Demasiado tiempo en sueños! Has sido expulsado.');
-        }
-    } else {
-        player.energy = Math.min(player.maxEnergy, player.energy + 5 * dt);
-        player.corruption = Math.max(0, player.corruption - 1 * dt);
-    }
-    
-    // Cámara
-    game.camera.x += (player.x - canvas.width/2 - game.camera.x) * 5 * dt;
-    game.camera.y += (player.y - canvas.height/2 - game.camera.y) * 5 * dt;
-    game.camera.x = Math.max(0, Math.min(2000 - canvas.width, game.camera.x));
-    game.camera.y = Math.max(0, Math.min(2000 - canvas.height, game.camera.y));
+// === SHOP ===
+function openShop() {
+  showMessage('Tienda en construcción... ¡Vuelve pronto!');
 }
 
-function updateEnemies(dt) {
-    for (const enemy of enemies) {
-        if (!enemy.alive) continue;
-        
-        const dist = Math.hypot(enemy.x - player.x, enemy.y - player.y);
-        
-        // IA simple
-        if (dist < 200) {
-            if (dist < 35) {
-                // Atacar
-                enemy.attackTimer -= dt;
-                if (enemy.attackTimer <= 0) {
-                    let dmg = enemy.atk - player.defense + Math.floor(Math.random() * 3);
-                    dmg = Math.max(1, dmg);
-                    player.hp -= dmg;
-                    enemy.attackTimer = 1.5;
-                    
-                    for (let i = 0; i < 4; i++) {
-                        particles.push({
-                            x: player.x, y: player.y,
-                            vx: (Math.random() - 0.5) * 60,
-                            vy: (Math.random() - 0.5) * 60,
-                            life: 0.4, maxLife: 0.4,
-                            color: [200, 50, 50],
-                            size: 2,
-                        });
-                    }
-                    
-                    if (player.hp <= 0) {
-                        game.state = 'gameover';
-                        document.getElementById('game-over').classList.add('show');
-                        document.getElementById('go-level').textContent = player.level;
-                    }
-                }
-            } else {
-                // Perseguir
-                const dir = { x: (player.x - enemy.x) / dist, y: (player.y - enemy.y) / dist };
-                enemy.vx = dir.x * enemy.speed;
-                enemy.vy = dir.y * enemy.speed;
-            }
-        } else {
-            // Idle: movimiento aleatorio
-            enemy.aiTimer -= dt;
-            if (enemy.aiTimer <= 0) {
-                enemy.aiTimer = 2 + Math.random() * 2;
-                const angle = Math.random() * Math.PI * 2;
-                enemy.vx = Math.cos(angle) * enemy.speed * 0.3;
-                enemy.vy = Math.sin(angle) * enemy.speed * 0.3;
-            }
-        }
-        
-        // Aplicar velocidad
-        enemy.x += enemy.vx * dt;
-        enemy.y += enemy.vy * dt;
-        
-        // Colisión con paredes
-        for (const tile of getTilesNear(enemy.x, enemy.y, 32)) {
-            if (tile.solid) {
-                const overlap = 20;
-                if (Math.abs(enemy.x - tile.x) < overlap && Math.abs(enemy.y - tile.y) < overlap) {
-                    enemy.x -= enemy.vx * dt * 2;
-                    enemy.y -= enemy.vy * dt * 2;
-                    enemy.vx = 0;
-                    enemy.vy = 0;
-                }
-            }
-        }
-        
-        enemy.x = Math.max(30, Math.min(1970, enemy.x));
-        enemy.y = Math.max(30, Math.min(1970, enemy.y));
-    }
-}
-
-function updateParticles(dt) {
-    for (let i = particles.length - 1; i >= 0; i--) {
-        const p = particles[i];
-        p.x += p.vx * dt;
-        p.y += p.vy * dt;
-        p.life -= dt;
-        p.size *= 0.98;
-        if (p.life <= 0) particles.splice(i, 1);
-    }
-}
-
-// ==============================================================================
-// RENDERIZADO
-// ==============================================================================
-
-function render() {
-    const palette = PALETTAS[currentZone] || PALETTAS.ciudad;
-    
-    // Fondo
-    ctx.fillStyle = `rgb(${palette.bg.join(',')})`;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Tiles visibles
-    const camX = game.camera.x, camY = game.camera.y;
-    
-    for (const tile of worldTiles) {
-        const sx = tile.x - camX;
-        const sy = tile.y - camY;
-        if (sx < -32 || sx > canvas.width + 32 || sy < -32 || sy > canvas.height + 32) continue;
-        
-        if (tile.type === 'wall') {
-            ctx.fillStyle = `rgb(${palette.wall.join(',')})`;
-            ctx.fillRect(sx, sy, 32, 32);
-            ctx.strokeStyle = `rgb(${palette.fg.join(',')})`;
-            ctx.strokeRect(sx, sy, 32, 32);
-        } else {
-            ctx.fillStyle = `rgb(${palette.fg.join(',')})`;
-            ctx.fillRect(sx, sy, 32, 32);
-            // Textura sutil
-            if ((tile.x / 32 + tile.y / 32) % 3 === 0) {
-                ctx.fillStyle = `rgba(${palette.accent.join(',')}, 0.3)`;
-                ctx.fillRect(sx + 4, sy + 4, 8, 8);
-            }
-        }
-    }
-    
-    // Items
-    for (const item of worldItems) {
-        const sx = item.x - camX;
-        const sy = item.y - camY;
-        if (sx < -20 || sx > canvas.width + 20 || sy < -20 || sy > canvas.height + 20) continue;
-        
-        // Brillo
-        ctx.beginPath();
-        ctx.arc(sx, sy, 10, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(220, 180, 60, 0.2)';
-        ctx.fill();
-        
-        // Item
-        ctx.fillStyle = '#f1c40f';
-        ctx.beginPath();
-        ctx.arc(sx, sy, 5, 0, Math.PI * 2);
-        ctx.fill();
-    }
-    
-    // NPCs
-    for (const npc of npcs) {
-        const sx = npc.x - camX;
-        const sy = npc.y - camY;
-        if (sx < -30 || sx > canvas.width + 30 || sy < -30 || sy > canvas.height + 30) continue;
-        
-        // Cuerpo
-        ctx.fillStyle = `rgb(${npc.color.join(',')})`;
-        ctx.beginPath();
-        ctx.ellipse(sx, sy + 5, 8, 12, 0, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Cabeza
-        ctx.fillStyle = '#ddb89a';
-        ctx.beginPath();
-        ctx.arc(sx, sy - 8, 7, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Nombre
-        ctx.fillStyle = `rgb(${npc.color.join(',')})`;
-        ctx.font = '9px monospace';
-        ctx.textAlign = 'center';
-        ctx.fillText(npc.nombre, sx, sy - 18);
-    }
-    
-    // Enemigos
-    for (const enemy of enemies) {
-        if (!enemy.alive) continue;
-        const sx = enemy.x - camX;
-        const sy = enemy.y - camY;
-        if (sx < -30 || sx > canvas.width + 30 || sy < -30 || sy > canvas.height + 30) continue;
-        
-        // Cuerpo
-        ctx.fillStyle = `rgb(${enemy.color.join(',')})`;
-        ctx.beginPath();
-        ctx.ellipse(sx, sy, enemy.size/2, enemy.size/2 * 1.2, 0, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Ojos
-        ctx.fillStyle = '#ff3333';
-        ctx.beginPath();
-        ctx.arc(sx - 3, sy - 3, 2, 0, Math.PI * 2);
-        ctx.arc(sx + 3, sy - 3, 2, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Barra de vida
-        if (enemy.hp < enemy.maxHp) {
-            const barW = 20;
-            const barH = 3;
-            ctx.fillStyle = '#333';
-            ctx.fillRect(sx - barW/2, sy - enemy.size/2 - 8, barW, barH);
-            ctx.fillStyle = '#dc143c';
-            ctx.fillRect(sx - barW/2, sy - enemy.size/2 - 8, barW * (enemy.hp / enemy.maxHp), barH);
-        }
-    }
-    
-    // Jugador
-    const px = player.x - camX;
-    const py = player.y - camY;
-    
-    // Efecto de sueño
-    if (player.inDream) {
-        ctx.beginPath();
-        ctx.arc(px, py, 25, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(150, 50, 200, 0.15)';
-        ctx.fill();
-    }
-    
-    // Cuerpo
-    const bodyColor = player.inDream ? [100, 50, 180] : [60, 100, 180];
-    ctx.fillStyle = `rgb(${bodyColor.join(',')})`;
-    ctx.beginPath();
-    ctx.ellipse(px, py + 5, 8, 12, 0, 0, Math.PI * 2);
-    ctx.fill();
-    
-    // Cabeza
-    ctx.fillStyle = '#ddb89a';
-    ctx.beginPath();
-    ctx.arc(px, py - 8, 7, 0, Math.PI * 2);
-    ctx.fill();
-    
-    // Ojos
-    ctx.fillStyle = player.inDream ? '#9b59b6' : '#4169e1';
-    ctx.beginPath();
-    ctx.arc(px - 3, py - 9, 2, 0, Math.PI * 2);
-    ctx.arc(px + 3, py - 9, 2, 0, Math.PI * 2);
-    ctx.fill();
-    
-    // Capa (si está en sueño)
-    if (player.inDream) {
-        ctx.fillStyle = 'rgba(80, 30, 120, 0.6)';
-        ctx.beginPath();
-        ctx.moveTo(px - 6, py - 3);
-        ctx.lineTo(px - 12, py + 15);
-        ctx.lineTo(px, py + 18);
-        ctx.lineTo(px + 12, py + 15);
-        ctx.lineTo(px + 6, py - 3);
-        ctx.fill();
-    }
-    
-    // Partículas
-    for (const p of particles) {
-        const alpha = Math.max(0, p.life / p.maxLife);
-        ctx.fillStyle = `rgba(${p.color.join(',')}, ${alpha})`;
-        ctx.beginPath();
-        ctx.arc(p.x - camX, p.y - camY, p.size, 0, Math.PI * 2);
-        ctx.fill();
-    }
-    
-    // Minimap
-    renderMinimap();
-}
-
-function renderMinimap() {
-    minimapCtx.fillStyle = 'rgba(0,0,0,0.7)';
-    minimapCtx.fillRect(0, 0, 100, 100);
-    
-    const scale = 100 / 2000;
-    
-    // Enemigos
-    minimapCtx.fillStyle = '#dc143c';
-    for (const e of enemies) {
-        if (!e.alive) continue;
-        minimapCtx.fillRect(e.x * scale - 1, e.y * scale - 1, 3, 3);
-    }
-    
-    // NPCs
-    minimapCtx.fillStyle = '#2ecc71';
-    for (const n of npcs) {
-        minimapCtx.fillRect(n.x * scale - 1, n.y * scale - 1, 3, 3);
-    }
-    
-    // Items
-    minimapCtx.fillStyle = '#f1c40f';
-    for (const i of worldItems) {
-        minimapCtx.fillRect(i.x * scale, i.y * scale, 2, 2);
-    }
-    
-    // Jugador
-    minimapCtx.fillStyle = '#00ffff';
-    minimapCtx.beginPath();
-    minimapCtx.arc(player.x * scale, player.y * scale, 3, 0, Math.PI * 2);
-    minimapCtx.fill();
-}
-
-// ==============================================================================
-// UI
-// ==============================================================================
-
-function updateUI() {
-    document.getElementById('hp-bar').style.width = (player.hp / player.maxHp * 100) + '%';
-    document.getElementById('hp-text').textContent = `${Math.max(0,Math.floor(player.hp))}/${player.maxHp}`;
-    document.getElementById('energy-bar').style.width = (player.energy / player.maxEnergy * 100) + '%';
-    document.getElementById('energy-text').textContent = `${Math.floor(player.energy)}/${player.maxEnergy}`;
-    document.getElementById('xp-bar').style.width = (player.xp / player.xpToLevel * 100) + '%';
-    document.getElementById('xp-text').textContent = `${player.xp}/${player.xpToLevel}`;
-    document.getElementById('corr-bar').style.width = player.corruption + '%';
-    document.getElementById('corr-text').textContent = `${Math.floor(player.corruption)}%`;
-    document.getElementById('level-display').textContent = `NIVEL ${player.level}`;
-    document.getElementById('plane-display').textContent = player.inDream ? '◈ MUNDO DE SUEÑOS' : '◈ MUNDO DESPIERTO';
-    
-    // Mensaje
-    const msgBox = document.getElementById('message-box');
-    if (messageTimer > 0) {
-        msgBox.textContent = messageText;
-        msgBox.classList.add('show');
-    } else {
-        msgBox.classList.remove('show');
-    }
-    
-    // Diálogo
-    const dialogBox = document.getElementById('dialog-box');
-    if (dialogActive) {
-        dialogBox.querySelector('.speaker').textContent = dialogSpeaker;
-        dialogBox.querySelector('.text').textContent = dialogText;
-        dialogBox.classList.add('show');
-    } else {
-        dialogBox.classList.remove('show');
-    }
-}
-
-// ==============================================================================
-// GAME LOOP
-// ==============================================================================
-
-function gameLoop(timestamp) {
-    deltaTime = Math.min((timestamp - lastTime) / 1000, 0.05);
-    lastTime = timestamp;
-    
-    if (game.state === 'playing') {
-        updatePlayer(deltaTime);
-        updateEnemies(deltaTime);
-        updateParticles(deltaTime);
-        messageTimer = Math.max(0, messageTimer - deltaTime);
-    }
-    
-    render();
-    updateUI();
-    
-    requestAnimationFrame(gameLoop);
-}
-
-// ==============================================================================
-// CONTROL
-// ==============================================================================
-
+// === GAME FLOW ===
 function startGame() {
-    document.getElementById('title-screen').classList.add('hidden');
-    game.state = 'playing';
-    generateWorld();
-    lastTime = performance.now();
-    requestAnimationFrame(gameLoop);
+  document.getElementById('title-screen').classList.add('hidden');
+  document.getElementById('loading-screen').classList.remove('hidden');
+  
+  // Simulate loading
+  let progress = 0;
+  const loadInterval = setInterval(() => {
+    progress += Math.random() * 15 + 5;
+    if (progress >= 100) {
+      progress = 100;
+      clearInterval(loadInterval);
+      setTimeout(() => {
+        document.getElementById('loading-screen').classList.add('hidden');
+        initGame();
+      }, 500);
+    }
+    document.getElementById('loading-bar').style.width = progress + '%';
+    const texts = ['Generando mundo...', 'Creando enemigos...', 'Tejiendo sueños...', 'Forjando armas...', 'Invocando NPCs...', 'Cargando audio...', 'Listo!'];
+    document.getElementById('loading-text').textContent = texts[Math.min(Math.floor(progress / 15), texts.length - 1)];
+  }, 200);
+}
+
+function initGame() {
+  // Init audio
+  AudioEngine.init();
+  
+  // Generate world
+  World.init();
+  spawnEnemies();
+  spawnNPCs();
+  
+  // Reset player
+  const startPos = findValidPos();
+  Player.x = startPos.x;
+  Player.y = startPos.y;
+  Player.hp = Player.maxHp;
+  Player.energy = Player.maxEnergy;
+  Player.inDream = false;
+  Player.state = 'idle';
+  Player.comboCount = 0;
+  Player.corruption = 0;
+  
+  // Clear bosses
+  Bosses = [];
+  currentBoss = null;
+  document.getElementById('boss-health').classList.remove('show');
+  
+  // Start ambient music
+  AudioEngine.playAmbient('ciudad');
+  
+  G.state = 'playing';
+  G.dayTime = 6;
+  
+  showMessage('ONEIROS — El Sueño de los Agentes Vivos');
+}
+
+function continueGame() {
+  const save = localStorage.getItem('oneiros_save');
+  if (save) {
+    try {
+      const data = JSON.parse(save);
+      Object.assign(Player, data.player);
+      G.dayTime = data.dayTime || 6;
+      document.getElementById('title-screen').classList.add('hidden');
+      World.init();
+      spawnEnemies();
+      spawnNPCs();
+      AudioEngine.init();
+      G.state = 'playing';
+      showMessage('Partida cargada.');
+    } catch(e) { startGame(); }
+  } else {
+    startGame();
+  }
+}
+
+function saveGame() {
+  const data = {
+    player: {
+      x: Player.x, y: Player.y,
+      hp: Player.hp, maxHp: Player.maxHp,
+      energy: Player.energy, maxEnergy: Player.maxEnergy,
+      level: Player.level, xp: Player.xp, xpToLevel: Player.xpToLevel,
+      skillPoints: Player.skillPoints,
+      attack: Player.attack, defense: Player.defense,
+      gold: Player.gold, corruption: Player.corruption,
+      inventory: Player.inventory,
+      weapons: Player.weapons, currentWeapon: Player.currentWeapon,
+      stats: Player.stats, reputation: Player.reputation,
+    },
+    dayTime: G.dayTime,
+    timestamp: Date.now(),
+  };
+  localStorage.setItem('oneiros_save', JSON.stringify(data));
+  showMessage('Partida guardada.');
+  document.getElementById('btn-continue').style.display = 'inline-block';
+}
+
+function gameOver() {
+  G.state = 'gameover';
+  AudioEngine.playDeath();
+  const go = document.getElementById('game-over');
+  go.classList.add('show');
+  document.getElementById('go-stats').innerHTML = `
+    Nivel alcanzado: ${Player.level}<br>
+    Enemigos derrotados: ${Player.stats.enemiesKilled}<br>
+    Jefes derrotados: ${Player.stats.bossesKilled}<br>
+    Daño total infligido: ${Player.stats.damageDealt}<br>
+    Máximo combo: ${Player.stats.maxComboHit}x<br>
+    Parries realizados: ${Player.stats.parriesPerformed}<br>
+    Oro acumulado: ${Player.gold}
+  `;
 }
 
 function restartGame() {
-    document.getElementById('game-over').classList.remove('show');
-    player.hp = player.maxHp;
-    player.energy = player.maxEnergy;
-    player.xp = 0;
-    player.level = 1;
-    player.xpToLevel = 100;
-    player.inDream = false;
-    player.corruption = 0;
-    player.x = 300;
-    player.y = 300;
-    player.attack = 15;
-    player.defense = 5;
-    player.alive = true;
-    generateWorld();
-    game.state = 'playing';
+  document.getElementById('game-over').classList.remove('show');
+  // Reset player stats partially
+  Player.hp = Player.maxHp;
+  Player.energy = Player.maxEnergy;
+  Player.state = 'idle';
+  Player.comboCount = 0;
+  Player.invincible = 0;
+  Player.staggerTimer = 0;
+  Player.dodgeTimer = 0;
+  Player.parryTimer = 0;
+  Player.vx = 0;
+  Player.vy = 0;
+  G.state = 'playing';
+  const pos = findValidPos();
+  Player.x = pos.x;
+  Player.y = pos.y;
+  spawnEnemies();
+  Bosses = [];
+  currentBoss = null;
+  document.getElementById('boss-health').classList.remove('show');
 }
 
-// Iniciar
-game.state = 'menu';
+function resumeGame() {
+  G.state = 'playing';
+  document.getElementById('pause-menu').classList.remove('show');
+}
+
+function quitToTitle() {
+  document.getElementById('pause-menu').classList.remove('show');
+  document.getElementById('game-over').classList.remove('show');
+  document.getElementById('title-screen').classList.remove('hidden');
+  G.state = 'menu';
+}
+
+function showControls() {
+  showMessage('WASD: Mover | SPACE: Atacar | SHIFT: Dodge | R: Parry | Q: Cambiar Plano | 1-4: Armas | E: Interactuar | I: Inventario | K: Habilidades | C: Crafting | ESC: Pausa');
+}
+
+// === INPUT ===
+document.addEventListener('keydown', (e) => {
+  if (G.keys[e.code]) return; // Prevent repeat
+  G.keys[e.code] = true;
+  G.keys[e.key] = true;
+  G.keysJust[e.code] = true;
+  G.keysJust[e.key] = true;
+  
+  if (G.state === 'playing') {
+    if (e.code === 'Escape') {
+      G.state = 'paused';
+      document.getElementById('pause-menu').classList.add('show');
+    }
+    if (e.code === 'KeyE') {
+      if (currentDialog) { selectDialogChoice(0); }
+      else { interact(); }
+    }
+    if (e.code === 'KeyQ') toggleDream();
+    if (e.code === 'KeyI') openInventory();
+    if (e.code === 'KeyK') openSkills();
+    if (e.code === 'KeyC') openCrafting();
+    if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') Player.dodge();
+    if (e.code === 'KeyR') Player.parry();
+    if (e.code === 'Digit1') Player.switchWeapon(0);
+    if (e.code === 'Digit2') Player.switchWeapon(1);
+    if (ecode === 'Digit3') Player.switchWeapon(2);
+    if (e.code === 'Digit4') Player.switchWeapon(3);
+  } else if (G.state === 'dialog') {
+    if (e.code === 'Escape') closeDialog();
+    if (e.code === 'Digit1') selectDialogChoice(0);
+    if (e.code === 'Digit2') selectDialogChoice(1);
+    if (e.code === 'Digit3') selectDialogChoice(2);
+    if (e.code === 'Digit4') selectDialogChoice(3);
+  } else if (G.state === 'inventory') {
+    if (e.code === 'KeyI' || e.code === 'Escape') closeInventory();
+  } else if (G.state === 'skills') {
+    if (e.code === 'KeyK' || e.code === 'Escape') closeSkills();
+  } else if (G.state === 'crafting') {
+    if (e.code === 'KeyC' || e.code === 'Escape') closeCrafting();
+  } else if (G.state === 'paused') {
+    if (e.code === 'Escape') resumeGame();
+  }
+  
+  if (e.code === 'Space') e.preventDefault();
+});
+
+document.addEventListener('keyup', (e) => {
+  G.keys[e.code] = false;
+  G.keys[e.key] = false;
+});
+
+canvas.addEventListener('mousemove', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  G.mouse.x = e.clientX - rect.left;
+  G.mouse.y = e.clientY - rect.top;
+});
+
+canvas.addEventListener('mousedown', () => { G.mouse.down = true; });
+canvas.addEventListener('mouseup', () => { G.mouse.down = false; });
+
+// === GAMEPLAY FUNCTIONS ===
+function toggleDream() {
+  if (Player.freeDreamShift || Player.energy >= 20) {
+    if (!Player.freeDreamShift) Player.energy -= 20;
+    Player.inDream = !Player.inDream;
+    showMessage(Player.inDream ? '◈ Plano Onírico' : '◈ Mundo Despierto');
+    flashScreen('dream');
+    Particles.emit(Player.x, Player.y, 20, {
+      color: Player.inDream ? [150,50,255] : [50,100,255],
+      speed: 80, life: 1, size: 5, glow: true
+    });
+    // Change ambient music
+    const tile = World.getTile(Player.x, Player.y);
+    AudioEngine.playAmbient(tile?.zone || 'ciudad');
+  } else {
+    showMessage('Energía insuficiente para cambiar de plano.');
+  }
+}
+
+function interact() {
+  // Check NPCs
+  for (const npc of NPCs) {
+    if (dist(Player, npc) < 50) {
+      startDialog(npc);
+      return;
+    }
+  }
+  // Check world items
+  // (simplified - would check worldItems array)
+  showMessage('No hay nada que interactuar aquí.');
+}
+
+// === UPDATE LOOP ===
+function updatePlayer(dt) {
+  if (G.state !== 'playing') return;
+  
+  // Timers
+  if (Player.attackTimer > 0) Player.attackTimer -= dt;
+  if (Player.dodgeTimer > 0) Player.dodgeTimer -= dt;
+  if (Player.dodgeCooldown > 0) Player.dodgeCooldown -= dt;
+  if (Player.parryTimer > 0) Player.parryTimer -= dt;
+  if (Player.parryCooldown > 0) Player.parryCooldown -= dt;
+  if (Player.invincible > 0) Player.invincible -= dt;
+  if (Player.staggerTimer > 0) { Player.staggerTimer -= dt; return; }
+  if (Player.comboTimer > 0) Player.comboTimer -= dt;
+  else Player.comboTimer = 0;
+  
+  // Energy regen
+  Player.energy = Math.min(Player.maxEnergy, Player.energy + 5 * dt);
+  
+  // HP regen from skill
+  if (Player.hasRegen) {
+    Player.hp = Math.min(Player.maxHp, Player.hp + 2 * dt);
+  }
+  
+  // Movement
+  let mx = 0, my = 0;
+  if (G.keys['KeyW'] || G.keys['w']) my -= 1;
+  if (G.keys['KeyS'] || G.keys['s']) my += 1;
+  if (G.keys['KeyA'] || G.keys['a']) mx -= 1;
+  if (G.keys['KeyD'] || G.keys['d']) mx += 1;
+  
+  if (mx !== 0 || my !== 0) {
+    const len = Math.sqrt(mx*mx + my*my);
+    mx /= len; my /= len;
+    Player.facing.x = mx;
+    Player.facing.y = my;
+    
+    if (Player.dodgeTimer > 0) {
+      // Dodge movement already set
+    } else {
+      Player.vx = mx * Player.speed;
+      Player.vy = my * Player.speed;
+    }
+    Player.state = 'walk';
+  } else {
+    Player.vx *= 0.8;
+    Player.vy *= 0.8;
+    if (Player.attackTimer <= 0 && Player.dodgeTimer <= 0) Player.state = 'idle';
+  }
+  
+  // Apply velocity with collision
+  const newX = Player.x + Player.vx * dt;
+  const newY = Player.y + Player.vy * dt;
+  
+  if (!World.isSolid(newX, Player.y)) Player.x = newX;
+  if (!World.isSolid(Player.x, newY)) Player.y = newY;
+  
+  // World bounds
+  Player.x = clamp(Player.x, TILE, WORLD_W - TILE);
+  Player.y = clamp(Player.y, TILE, WORLD_H - TILE);
+  
+  // Distance tracking
+  Player.stats.distanceTraveled += Math.sqrt(Player.vx**2 + Player.vy**2) * dt;
+  
+  // Attack
+  if (G.keys['Space'] && Player.attackTimer <= 0 && Player.dodgeTimer <= 0) {
+    const atkResult = Player.attack();
+    if (atkResult) {
+      // Check enemy hits
+      for (const e of Enemies) {
+        if (!e.alive) continue;
+        const d = dist({ x: atkResult.x, y: atkResult.y }, e);
+        if (d < atkResult.range + e.size) {
+          // Check angle
+          const angleToEnemy = angleTo({ x: atkResult.x, y: atkResult.y }, e);
+          const angleDiff = Math.abs(angleToEnemy - atkResult.angle);
+          if (angleDiff < Math.PI / 2 || angleDiff > Math.PI * 1.5) {
+            damageEnemy(e, atkResult.damage);
+          }
+        }
+      }
+      // Check boss hits
+      for (const b of Bosses) {
+        if (!b.alive) continue;
+        const d = dist({ x: atkResult.x, y: atkResult.y }, b);
+        if (d < atkResult.range + b.size) {
+          damageBoss(b, atkResult.damage);
+        }
+      }
+    }
+  }
+  
+  // Dream touch skill
+  if (Player.hasDreamTouch && G.keys['KeyF'] && Player.energy >= 10) {
+    Player.energy -= 10;
+    // Shoot dream projectile
+    const angle = Math.atan2(Player.facing.y, Player.facing.x);
+    Particles.emit(Player.x, Player.y, 5, { color: [150,50,255], speed: 200, life: 0.5, size: 4, glow: true });
+    // Check hits
+    for (const e of Enemies) {
+      if (!e.alive) continue;
+      const d = dist(Player, e);
+      if (d < 200) {
+        const angleToE = angleTo(Player, e);
+        if (Math.abs(angleToE - angle) < 0.5) {
+          damageEnemy(e, Math.floor(Player.getAtk() * 0.8));
+        }
+      }
+    }
+  }
+  
+  // Corruption from dream
+  if (Player.inDream) {
+    Player.corruption = Math.min(100, Player.corruption + 2 * dt);
+    if (Player.corruption >= 100) {
+      Player.takeDamage(10, Player.x, Player.y);
+      Player.corruption = 80;
+    }
+  } else {
+    Player.corruption = Math.max(0, Player.corruption - 3 * dt);
+  }
+  
+  // Animation
+  Player.animTimer += dt;
+  if (Player.animTimer > 0.15) {
+    Player.animTimer = 0;
+    Player.animFrame = (Player.animFrame + 1) % 4;
+  }
+}
+
+function damageEnemy(e, damage) {
+  if (!e.alive) return;
+  const def = e.def;
+  const dmg = Math.max(1, damage - def);
+  e.hp -= dmg;
+  e.staggerTimer = 0.3;
+  Player.stats.damageDealt += dmg;
+  
+  // Knockback
+  const dx = e.x - Player.x;
+  const dy = e.y - Player.y;
+  const d = Math.sqrt(dx*dx + dy*dy) || 1;
+  e.vx += (dx / d) * 150;
+  e.vy += (dy / d) * 150;
+  
+  Particles.emit(e.x, e.y - e.size/2, 4, { color: [255,80,80], speed: 60, life: 0.4, size: 3 });
+  AudioEngine.playHit();
+  showDamageNumber(e.x, e.y - e.size, dmg.toString(), Player.comboCount >= 3 ? 'crit' : '');
+  
+  // Lifesteal
+  if (Player.hasLifesteal) {
+    Player.hp = Math.min(Player.maxHp, Player.hp + Math.floor(dmg * 0.15));
+  }
+  
+  if (e.hp <= 0) {
+    e.alive = false;
+    Player.stats.enemiesKilled++;
+    const xp = Math.floor(e.xp * e.xpMult);
+    Player.gainXP(xp);
+    showNotification(`+${xp} XP`, 'xp');
+    
+    // Drop loot
+    if (Math.random() < 0.3) {
+      const drops = [
+        { nombre: 'Poción de Vigilia', tipo: 'consumible', efecto: 'curar', cantidad: 1, rareza: 'comun' },
+        { nombre: 'Cristal Onírico', tipo: 'material', cantidad: 1, rareza: 'raro' },
+      ];
+      const drop = drops[Math.floor(Math.random() * drops.length)];
+      Player.inventory.push({ ...drop });
+      showNotification(`📦 ${drop.nombre}`, 'item');
+    }
+    
+    Particles.emit(e.x, e.y, 12, { color: e.color, speed: 80, life: 0.6, size: 4 });
+    AudioEngine.playDeath();
+    
+    // Check for boss spawn
+    if (Player.stats.enemiesKilled === 15) {
+      const pos = findValidPos();
+      spawnBoss('arquitecto_corrupto', pos.x, pos.y);
+    }
+    if (Player.stats.enemiesKilled === 30) {
+      const pos = findValidPos();
+      spawnBoss('devorador_sueños', pos.x, pos.y);
+    }
+  }
+}
+
+function damageBoss(boss, damage) {
+  if (!boss.alive) return;
+  const def = boss.def;
+  const phaseData = boss.phases[boss.currentPhase] || { atkMult: 1 };
+  const dmg = Math.max(1, damage - def);
+  boss.hp -= dmg;
+  Player.stats.damageDealt += dmg;
+  
+  Particles.emit(boss.x, boss.y - boss.size, 6, { color: [255,100,100], speed: 60, life: 0.5, size: 4 });
+  AudioEngine.playHit();
+  showDamageNumber(boss.x, boss.y - boss.size - 10, dmg.toString(), 'crit');
+  
+  // Phase transitions
+  const hpPct = boss.hp / boss.maxHp;
+  for (let i = boss.phases.length - 1; i >= 0; i--) {
+    if (hpPct <= boss.phases[i].hpThreshold && boss.currentPhase < i) {
+      boss.currentPhase = i;
+      boss.phaseTransition = true;
+      showMessage(`⚔ ¡${boss.nombre} cambia de fase!`);
+      Particles.emit(boss.x, boss.y, 30, { color: boss.color, speed: 120, life: 1.5, size: 6, glow: true });
+      G.screenShake = 0.3;
+      // Update phase dots
+      const dots = document.querySelectorAll('.boss-phase-dot');
+      dots.forEach((d, idx) => { d.classList.toggle('active', idx <= i); });
+      setTimeout(() => { boss.phaseTransition = false; }, 2000);
+      break;
+    }
+  }
+  
+  if (boss.hp <= 0) {
+    boss.alive = false;
+    Player.stats.bossesKilled++;
+    Player.gainXP(boss.xp);
+    showNotification(`🏆 ¡${boss.nombre} derrotado! +${boss.xp} XP`, 'xp');
+    Particles.emit(boss.x, boss.y, 40, { color: [255,215,0], speed: 150, life: 2, size: 6, glow: true });
+    G.screenShake = 0.5;
+    AudioEngine.playLevelUp();
+    
+    // Hide boss health
+    document.getElementById('boss-health').classList.remove('show');
+    currentBoss = null;
+    
+    // Drop legendary loot
+    Player.inventory.push({ nombre: `Esencia de ${boss.nombre}`, tipo: 'material', cantidad: 1, rareza: 'legendario', value: 500 });
+    showNotification(`📦 Esencia de ${boss.nombre}`, 'item');
+    
+    // Resume ambient
+    const tile = World.getTile(Player.x, Player.y);
+    AudioEngine.playAmbient(tile?.zone || 'ciudad');
+  }
+}
+
+function updateEnemies(dt) {
+  for (const e of Enemies) {
+    if (!e.alive) continue;
+    
+    const d = dist(Player, e);
+    e.aiTimer -= dt;
+    e.attackTimer -= dt;
+    e.staggerTimer -= dt;
+    
+    if (e.staggerTimer > 0) {
+      e.vx *= 0.9;
+      e.vy *= 0.9;
+      e.x += e.vx * dt;
+      e.y += e.vy * dt;
+      continue;
+    }
+    
+    // Phasing
+    if (e.phasing) {
+      e.phaseTimer -= dt;
+      if (e.phaseTimer <= 0) {
+        e.phaseVisible = !e.phaseVisible;
+        e.phaseTimer = 2 + Math.random() * 2;
+      }
+    }
+    
+    if (d > e.detectionRange) {
+      // Patrol
+      if (e.aiTimer <= 0) {
+        e.patrolAngle += (Math.random() - 0.5) * 2;
+        e.aiTimer = 2 + Math.random() * 2;
+      }
+      e.vx = Math.cos(e.patrolAngle) * e.speed * 0.3;
+      e.vy = Math.sin(e.patrolAngle) * e.speed * 0.3;
+    } else {
+      // Chase
+      const angle = angleTo(e, Player);
+      e.facing.x = Math.cos(angle);
+      e.facing.y = Math.sin(angle);
+      
+      if (e.ranged && d < e.attackRange && d > 60) {
+        // Ranged attack
+        if (e.attackTimer <= 0) {
+          e.attackTimer = e.attackCooldown;
+          // Fire projectile
+          Particles.emit(e.x, e.y, 3, { color: e.color, speed: 150, life: 1, size: 4, glow: true });
+          // Check hit
+          if (d < e.attackRange && Math.random() < 0.4) {
+            Player.takeDamage(e.atk, e.x, e.y);
+          }
+        }
+        e.vx *= 0.9;
+        e.vy *= 0.9;
+      } else if (d < e.attackRange) {
+        // Melee
+        e.vx = Math.cos(angle) * e.speed;
+        e.vy = Math.sin(angle) * e.speed;
+        if (e.attackTimer <= 0 && d < e.attackRange * 0.7) {
+          e.attackTimer = e.attackCooldown;
+          Player.takeDamage(e.atk, e.x, e.y);
+        }
+      } else {
+        e.vx = Math.cos(angle) * e.speed;
+        e.vy = Math.sin(angle) * e.speed;
+      }
+    }
+    
+    // Apply velocity
+    const newX = e.x + e.vx * dt;
+    const newY = e.y + e.vy * dt;
+    if (!World.isSolid(newX, e.y)) e.x = newX;
+    if (!World.isSolid(e.x, newY)) e.y = newY;
+    e.vx *= 0.9;
+    e.vy *= 0.9;
+    
+    // Animation
+    e.animTimer += dt;
+    if (e.animTimer > 0.2) {
+      e.animTimer = 0;
+      e.animFrame = (e.animFrame + 1) % 4;
+    }
+  }
+}
+
+function updateBosses(dt) {
+  for (const boss of Bosses) {
+    if (!boss.alive || boss.phaseTransition) continue;
+    
+    const d = dist(Player, boss);
+    boss.aiTimer -= dt;
+    boss.attackTimer -= dt;
+    boss.staggerTimer -= dt;
+    
+    if (boss.staggerTimer > 0) {
+      boss.vx *= 0.9;
+      boss.vy *= 0.9;
+      boss.x += boss.vx * dt;
+      boss.y += boss.vy * dt;
+      continue;
+    }
+    
+    const phaseData = boss.phases[boss.currentPhase] || { behavior: 'normal', atkMult: 1 };
+    const atk = Math.floor(boss.atk * phaseData.atkMult);
+    
+    const angle = angleTo(boss, Player);
+    boss.facing.x = Math.cos(angle);
+    boss.facing.y = Math.sin(angle);
+    
+    // Boss AI based on phase behavior
+    if (phaseData.behavior === 'summon' && boss.aiTimer <= 0) {
+      boss.aiTimer = 5;
+      // Spawn minions
+      for (let i = 0; i < 2; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        spawnEnemy('sombra_menor', boss.x + Math.cos(angle) * 60, boss.y + Math.sin(angle) * 60);
+      }
+      showMessage(`${boss.nombre} invoca sombras!`);
+    }
+    
+    if (d > 80) {
+      boss.vx = Math.cos(angle) * 60;
+      boss.vy = Math.sin(angle) * 60;
+    } else {
+      boss.vx *= 0.9;
+      boss.vy *= 0.9;
+    }
+    
+    // Boss attack
+    if (boss.attackTimer <= 0 && d < 100) {
+      boss.attackTimer = boss.attackCooldown;
+      Player.takeDamage(atk, boss.x, boss.y);
+      Particles.emit(boss.x, boss.y, 8, { color: boss.color, speed: 80, life: 0.5, size: 5, glow: true });
+      G.screenShake = 0.1;
+    }
+    
+    // Apply velocity
+    const newX = boss.x + boss.vx * dt;
+    const newY = boss.y + boss.vy * dt;
+    if (!World.isSolid(newX, boss.y)) boss.x = newX;
+    if (!World.isSolid(boss.x, newY)) boss.y = newY;
+    
+    boss.animTimer += dt;
+    if (boss.animTimer > 0.15) {
+      boss.animTimer = 0;
+      boss.animFrame = (boss.animFrame + 1) % 4;
+    }
+  }
+}
+
+function updateCamera() {
+  const targetX = Player.x - CANVAS_W / 2;
+  const targetY = Player.y - CANVAS_H / 2;
+  G.camera.x = lerp(G.camera.x, targetX, 5 * G.deltaTime);
+  G.camera.y = lerp(G.camera.y, targetY, 5 * G.deltaTime);
+  
+  // Clamp
+  G.camera.x = clamp(G.camera.x, 0, WORLD_W - CANVAS_W);
+  G.camera.y = clamp(G.camera.y, 0, WORLD_H - CANVAS_H);
+  
+  // Screen shake
+  if (G.screenShake > 0) {
+    G.screenShake -= G.deltaTime;
+    G.camera.x += (Math.random() - 0.5) * 10 * G.screenShake;
+    G.camera.y += (Math.random() - 0.5) * 10 * G.screenShake;
+  }
+}
+
+// === RENDER ===
+function render() {
+  ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+  
+  const cam = G.camera;
+  const tile = World.getTile(Player.x, Player.y);
+  const zone = tile?.zone || 'ciudad';
+  const pal = PALETTES[zone];
+  
+  // Background
+  ctx.fillStyle = `rgb(${pal.bg.join(',')})`;
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+  
+  // Dream overlay
+  if (Player.inDream) {
+    ctx.fillStyle = 'rgba(80, 20, 120, 0.15)';
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+  }
+  
+  // Day/night tint
+  const dayBrightness = G.dayTime >= 6 && G.dayTime <= 18 ? 1 : 0.6;
+  if (dayBrightness < 1) {
+    ctx.fillStyle = `rgba(0,0,20,${(1-dayBrightness)*0.4})`;
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+  }
+  
+  // Tiles (only visible)
+  const startX = Math.floor(cam.x / TILE) * TILE;
+  const startY = Math.floor(cam.y / TILE) * TILE;
+  const endX = Math.min(cam.x + CANVAS_W + TILE, WORLD_W);
+  const endY = Math.min(cam.y + CANVAS_H + TILE, WORLD_H);
+  
+  for (let x = startX; x < endX; x += TILE) {
+    for (let y = startY; y < endY; y += TILE) {
+      const t = World.getTile(x, y);
+      if (!t) continue;
+      const sx = x - cam.x;
+      const sy = y - cam.y;
+      
+      if (t.type === 'wall') {
+        ctx.fillStyle = `rgb(${pal.wall.join(',')})`;
+        ctx.fillRect(sx, sy, TILE, TILE);
+        // Wall highlight
+        ctx.fillStyle = `rgba(255,255,255,0.03)`;
+        ctx.fillRect(sx, sy, TILE, 2);
+        ctx.fillRect(sx, sy, 2, TILE);
+      } else {
+        ctx.fillStyle = `rgb(${pal.floor.join(',')})`;
+        ctx.fillRect(sx, sy, TILE, TILE);
+        // Floor pattern
+        if ((Math.floor(x/TILE) + Math.floor(y/TILE)) % 2 === 0) {
+          ctx.fillStyle = 'rgba(255,255,255,0.02)';
+          ctx.fillRect(sx, sy, TILE, TILE);
+        }
+      }
+    }
+  }
+  
+  // Decorations
+  for (const dec of World.decorations) {
+    const sx = dec.x - cam.x;
+    const sy = dec.y - cam.y;
+    if (sx < -20 || sx > CANVAS_W + 20 || sy < -20 || sy > CANVAS_H + 20) continue;
+    ctx.fillStyle = dec.color;
+    ctx.globalAlpha = 0.6;
+    if (dec.type === 'crystal') {
+      ctx.beginPath();
+      ctx.moveTo(sx, sy - dec.size);
+      ctx.lineTo(sx + dec.size/2, sy);
+      ctx.lineTo(sx, sy + dec.size/2);
+      ctx.lineTo(sx - dec.size/2, sy);
+      ctx.closePath();
+      ctx.fill();
+    } else if (dec.type === 'pillar') {
+      ctx.fillRect(sx - 3, sy - dec.size, 6, dec.size * 2);
+    } else {
+      ctx.fillRect(sx - dec.size/2, sy - dec.size/2, dec.size, dec.size);
+    }
+    ctx.globalAlpha = 1;
+  }
+  
+  // World items (simplified rendering)
+  // Would render worldItems here
+  
+  // Enemies
+  for (const e of Enemies) {
+    if (!e.alive) continue;
+    if (e.phasing && !e.phaseVisible) continue;
+    const sx = e.x - cam.x;
+    const sy = e.y - cam.y;
+    if (sx < -50 || sx > CANVAS_W + 50 || sy < -50 || sy > CANVAS_H + 50) continue;
+    
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath();
+    ctx.ellipse(sx, sy + e.size * 0.8, e.size * 0.6, e.size * 0.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Body
+    ctx.fillStyle = `rgb(${e.color.join(',')})`;
+    ctx.globalAlpha = e.phasing ? 0.4 : 1;
+    ctx.beginPath();
+    ctx.arc(sx, sy, e.size/2, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Eyes
+    ctx.fillStyle = '#fff';
+    const eyeOff = e.size * 0.15;
+    ctx.fillRect(sx - eyeOff - 2, sy - 3, 3, 3);
+    ctx.fillRect(sx + eyeOff, sy - 3, 3, 3);
+    ctx.fillStyle = '#f00';
+    ctx.fillRect(sx - eyeOff - 1, sy - 2, 2, 2);
+    ctx.fillRect(sx + eyeOff + 1, sy - 2, 2, 2);
+    
+    // HP bar
+    if (e.hp < e.maxHp) {
+      const barW = e.size * 1.2;
+      ctx.fillStyle = '#300';
+      ctx.fillRect(sx - barW/2, sy - e.size/2 - 8, barW, 4);
+      ctx.fillStyle = '#dc143c';
+      ctx.fillRect(sx - barW/2, sy - e.size/2 - 8, barW * (e.hp / e.maxHp), 4);
+    }
+    ctx.globalAlpha = 1;
+  }
+  
+  // Bosses
+  for (const boss of Bosses) {
+    if (!boss.alive) continue;
+    const sx = boss.x - cam.x;
+    const sy = boss.y - cam.y;
+    if (sx < -80 || sx > CANVAS_W + 80 || sy < -80 || sy > CANVAS_H + 80) continue;
+    
+    // Boss glow
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = `rgb(${boss.color.join(',')})`;
+    
+    // Body
+    ctx.fillStyle = `rgb(${boss.color.join(',')})`;
+    ctx.beginPath();
+    ctx.arc(sx, sy, boss.size/2, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Inner glow
+    ctx.fillStyle = `rgba(255,255,255,0.2)`;
+    ctx.beginPath();
+    ctx.arc(sx, sy, boss.size/3, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Eyes
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(sx - 8, sy - 5, 6, 6);
+    ctx.fillRect(sx + 2, sy - 5, 6, 6);
+    ctx.fillStyle = '#f00';
+    ctx.fillRect(sx - 6, sy - 3, 3, 3);
+    ctx.fillRect(sx + 4, sy - 3, 3, 3);
+    
+    ctx.shadowBlur = 0;
+  }
+  
+  // NPCs
+  for (const npc of NPCs) {
+    const sx = npc.x - cam.x;
+    const sy = npc.y - cam.y;
+    if (sx < -50 || sx > CANVAS_W + 50 || sy < -50 || sy > CANVAS_H + 50) continue;
+    
+    // NPC body
+    ctx.fillStyle = `rgb(${npc.color.join(',')})`;
+    ctx.beginPath();
+    ctx.arc(sx, sy, npc.size/2, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Interaction indicator
+    const d = dist(Player, npc);
+    if (d < 50) {
+      ctx.fillStyle = '#f1c40f';
+      ctx.font = '10px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('!', sx, sy - npc.size/2 - 8);
+    }
+    
+    // Name
+    ctx.fillStyle = '#aaa';
+    ctx.font = '9px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(npc.nombre, sx, sy + npc.size/2 + 12);
+  }
+  
+  // Player
+  const px = Player.x - cam.x;
+  const py = Player.y - cam.y;
+  
+  // Player shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.beginPath();
+  ctx.ellipse(px, py + Player.height * 0.8, Player.width * 0.6, Player.height * 0.15, 0, 0, Math.PI * 2);
+  ctx.fill();
+  
+  // Invincibility flash
+  if (Player.invincible > 0 && Math.floor(G.time * 10) % 2 === 0) {
+    ctx.globalAlpha = 0.5;
+  }
+  
+  // Dodge trail
+  if (Player.dodgeTimer > 0) {
+    ctx.globalAlpha = 0.4;
+    ctx.fillStyle = 'rgba(100,150,255,0.3)';
+    ctx.beginPath();
+    ctx.arc(px - Player.vx * 0.05, py - Player.vy * 0.05, Player.width/2 + 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = Player.invincible > 0 ? 0.5 : 1;
+  }
+  
+  // Player body
+  const playerColor = Player.inDream ? [120,80,200] : [80,120,200];
+  ctx.fillStyle = `rgb(${playerColor.join(',')})`;
+  ctx.beginPath();
+  ctx.arc(px, py, Player.width/2, 0, Math.PI * 2);
+  ctx.fill();
+  
+  // Player inner
+  ctx.fillStyle = Player.inDream ? [180,120,255] : [120,180,255];
+  ctx.beginPath();
+  ctx.arc(px, py, Player.width/3, 0, Math.PI * 2);
+  ctx.fill();
+  
+  // Eyes
+  ctx.fillStyle = '#fff';
+  const eyeX = Player.facing.x * 3;
+  const eyeY = Player.facing.y * 3;
+  ctx.fillRect(px + eyeX - 3, py + eyeY - 2, 3, 3);
+  ctx.fillRect(px + eyeX + 1, py + eyeY - 2, 3, 3);
+  
+  // Weapon indicator
+  const w = Player.currentWeaponData;
+  ctx.fillStyle = '#ccc';
+  ctx.font = '8px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(`${Player.currentWeapon+1}:${w.nombre.split(' ')[0]}`, px, py + Player.height/2 + 14);
+  
+  // Parry effect
+  if (Player.parryTimer > 0) {
+    ctx.strokeStyle = 'rgba(255,255,100,0.6)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(px, py, Player.width + 5, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  
+  ctx.globalAlpha = 1;
+  
+  // Particles
+  Particles.draw(ctx, cam);
+  
+  // Dynamic lighting overlay
+  ctx.save();
+  ctx.globalCompositeOperation = 'multiply';
+  const lightGrad = ctx.createRadialGradient(px, py, 0, px, py, 200);
+  lightGrad.addColorStop(0, 'rgba(40,35,50,1)');
+  lightGrad.addColorStop(1, 'rgba(8,6,15,1)');
+  ctx.fillStyle = lightGrad;
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+  ctx.restore();
+  
+  // Point lights
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  for (const light of World.lights) {
+    const lx = light.x - cam.x;
+    const ly = light.y - cam.y;
+    if (lx < -light.radius || lx > CANVAS_W + light.radius || ly < -light.radius || ly > CANVAS_H + light.radius) continue;
+    const flicker = 1 + Math.sin(G.time * 3 + light.phase) * light.flicker;
+    const grad = ctx.createRadialGradient(lx, ly, 0, lx, ly, light.radius * flicker);
+    grad.addColorStop(0, `rgba(${light.color.join(',')},${light.intensity * 0.3})`);
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(lx - light.radius, ly - light.radius, light.radius * 2, light.radius * 2);
+  }
+  ctx.restore();
+  
+  // Post-processing: Vignette
+  ctx.save();
+  const vigGrad = ctx.createRadialGradient(CANVAS_W/2, CANVAS_H/2, CANVAS_W * 0.3, CANVAS_W/2, CANVAS_H/2, CANVAS_W * 0.7);
+  vigGrad.addColorStop(0, 'rgba(0,0,0,0)');
+  vigGrad.addColorStop(1, 'rgba(0,0,0,0.4)');
+  ctx.fillStyle = vigGrad;
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+  ctx.restore();
+  
+  // Dream distortion effect
+  if (Player.inDream) {
+    ctx.save();
+    ctx.globalAlpha = 0.05 + Math.sin(G.time * 2) * 0.03;
+    ctx.fillStyle = '#9b59b6';
+    for (let i = 0; i < 5; i++) {
+      const rx = Math.random() * CANVAS_W;
+      const ry = Math.random() * CANVAS_H;
+      const rw = 50 + Math.random() * 200;
+      const rh = 1 + Math.random() * 3;
+      ctx.fillRect(rx, ry, rw, rh);
+    }
+    ctx.restore();
+  }
+  
+  // Corruption overlay
+  if (Player.corruption > 20) {
+    ctx.save();
+    ctx.globalAlpha = (Player.corruption / 100) * 0.3;
+    ctx.fillStyle = '#4a0080';
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+    // Corruption particles
+    for (let i = 0; i < Player.corruption / 10; i++) {
+      const cx = Math.random() * CANVAS_W;
+      const cy = Math.random() * CANVAS_H;
+      ctx.fillStyle = `rgba(150,0,255,${Math.random() * 0.3})`;
+      ctx.fillRect(cx, cy, 2, 2);
+    }
+    ctx.restore();
+  }
+  
+  // Minimap
+  renderMinimap();
+}
+
+function renderMinimap() {
+  const mmCtx = minimapCtx;
+  mmCtx.clearRect(0, 0, 120, 120);
+  mmCtx.fillStyle = 'rgba(5,5,15,0.8)';
+  mmCtx.fillRect(0, 0, 120, 120);
+  
+  const scale = 120 / WORLD_W;
+  const ox = -G.camera.x * scale + 60 - Player.x * scale;
+  const oy = -G.camera.y * scale + 60 - Player.y * scale;
+  
+  // Player dot
+  mmCtx.fillStyle = '#4af';
+  mmCtx.beginPath();
+  mmCtx.arc(60, 60, 3, 0, Math.PI * 2);
+  mmCtx.fill();
+  
+  // Enemies
+  for (const e of Enemies) {
+    if (!e.alive) continue;
+    mmCtx.fillStyle = '#f44';
+    mmCtx.fillRect(e.x * scale - 1, e.y * scale - 1, 2, 2);
+  }
+  
+  // NPCs
+  for (const npc of NPCs) {
+    mmCtx.fillStyle = '#4f4';
+    mmCtx.fillRect(npc.x * scale - 1, npc.y * scale - 1, 2, 2);
+  }
+  
+  // Bosses
+  for (const b of Bosses) {
+    if (!b.alive) continue;
+    mmCtx.fillStyle = '#f80';
+    mmCtx.beginPath();
+    mmCtx.arc(b.x * scale, b.y * scale, 3, 0, Math.PI * 2);
+    mmCtx.fill();
+  }
+}
+
+// === MAIN LOOP ===
+function gameLoop(timestamp) {
+  G.deltaTime = Math.min((timestamp - G.lastTime) / 1000, 0.05) * G.slowMotion;
+  G.lastTime = timestamp;
+  G.time += G.deltaTime;
+  G.frameCount++;
+  
+  // Clear just-pressed keys
+  if (G.state === 'playing') {
+    G.keysJust = {};
+  }
+  
+  // Day/night cycle
+  G.dayTime += G.daySpeed * G.deltaTime / 60;
+  if (G.dayTime >= 24) G.dayTime -= 24;
+  
+  if (G.state === 'playing') {
+    updatePlayer(G.deltaTime);
+    updateEnemies(G.deltaTime);
+    updateBosses(G.deltaTime);
+    Particles.update(G.deltaTime);
+    updateCamera();
+    updateHUD();
+    
+    // Check zone transitions
+    const tile = World.getTile(Player.x, Player.y);
+    if (tile && tile.zone !== G.lastZone) {
+      G.lastZone = tile.zone;
+      const zoneNames = { ciudad: 'Ciudad Despierta', velo: 'El Velo', jardin: 'Jardín Onírico', torre: 'Torre de los Vigías', abismo: 'El Abismo', espejos: 'Palacio de Espejos' };
+      showZoneIndicator(zoneNames[tile.zone] || tile.zone);
+      AudioEngine.playAmbient(tile.zone);
+    }
+    
+    // Interaction prompt
+    let nearInteractable = false;
+    for (const npc of NPCs) {
+      if (dist(Player, npc) < 50) {
+        showInteractPrompt(`Hablar con ${npc.nombre}`);
+        nearInteractable = true;
+        break;
+      }
+    }
+    if (!nearInteractable) hideInteractPrompt();
+  }
+  
+  render();
+  requestAnimationFrame(gameLoop);
+}
+
+// === INIT ===
+G.lastZone = 'ciudad';
+requestAnimationFrame(gameLoop);
+
+// Check for save
+if (localStorage.getItem('oneiros_save')) {
+  document.getElementById('btn-continue').style.display = 'inline-block';
+}
+
 </script>
+
 </body>
 </html>
